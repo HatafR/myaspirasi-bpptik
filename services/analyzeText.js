@@ -5,7 +5,7 @@
  * Fallback  → rule-based
  */
 
-const ML_API_URL = "https://web-production-80b19.up.railway.app/predict";
+const ML_API_URL = "https://router.huggingface.co/hf-inference/models/w11wo/indonesian-roberta-base-sentiment-classifier";
 
 // ── Rule-based fallback ───────────────────────────────────────────────────────
 const ruleBased = (text) => {
@@ -27,7 +27,7 @@ const ruleBased = (text) => {
 const analyzeWithML = async (text) => {
   const res = await fetch(ML_API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.HF_TOKEN}` },
     body: JSON.stringify({ text }),
   });
   const data = await res.json();
