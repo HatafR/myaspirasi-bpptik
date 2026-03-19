@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  general_admin
+  service_admin
+  super_admin
+}
+
+enum TicketStatus {
+  submitted
+  assigned
+  in_progress
+  resolved
+  returned
+  closed
+}
+
+enum NotificationType {
+  submitted
+  returned
+  resolved
+}
+
+enum TicketCategory {
+  kritik
+  saran
+  komentar
+}
+
+model User {
+  id       String   @id @default(uuid())
+  name     String
+  email    String   @unique
+  username String   @unique
+  password String
+  role     UserRole
+  isActive Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedServices Service[]             @relation("ServiceAdmin")
+  assignedTickets  Ticket[]              @relation("AssignedTickets")
+  statusChanges    TicketStatusHistory[]
+  auditLogs        AuditLog[]
+}
+
+model Service {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+  isActive    Boolean @default(true)
+
+  requiresManualAssignment Boolean @default(false)
+
+  assignedAdminId String?
+  assignedAdmin   User?   @relation("ServiceAdmin", fields: [assignedAdminId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tickets Ticket[]
+}
+
+model Ticket {
+  id           String @id @default(uuid())
+  ticketNumber String @unique
+
+  name    String?
+  email   String
+  message String
+
+  status TicketStatus @default(submitted)
+
+  sentiment String?
+  category  TicketCategory?
+  aiSource String? @default("rule-based")
+
+  rejectionReason String?
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedTickets", fields: [assignedToId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime?
+
+  notifications   NotificationLog[]
+  statusHistories TicketStatusHistory[]
+  auditLogs       AuditLog[]
+  rating          Rating?
+  response        TicketResponse?
+}
+
+model NotificationLog {
+  id String @id @default(uuid())
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  email String
+  type  NotificationType
+
+  subject String
+  status  String
+
+  sentAt       DateTime?
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+}
+
+model TicketStatusHistory {
+  id String @id @default(uuid())
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  status TicketStatus
+
+  changedById String?
+  changedBy   User?   @relation(fields: [changedById], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  ticketId String?
+  ticket   Ticket? @relation(fields: [ticketId], references: [id])
+
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id])
+
+  action String
+  entity String
+
+  oldValue String?
+  newValue String?
+
+  createdAt DateTime @default(now())
+}
+
+model Rating {
+  id       String @id @default(uuid())
+  ticketId String @unique
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  score   Int
+  comment String?
+
+  createdAt DateTime @default(now())
+}
+
+model TicketResponse {
+  id       String @id @default(uuid())
+  ticketId String @unique
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  content String
+
+  createdAt DateTime @default(now())
+}
