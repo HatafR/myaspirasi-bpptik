@@ -12,24 +12,24 @@ html, body {
 }
 
 body {
-  background: #F0F4F8;
+  background: #F0F5FB;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: #0F2744;
+  color: #0F1F4B;
 }
 
 :root {
-  --navy:   #0A2156;
-  --blue:   #1565C0;
-  --blue2:  #1976D2;
-  --sky:    #E3F0FF;
-  --accent: #0288D1;
-  --gold:   #F59E0B;
-  --green:  #16A34A;
-  --red:    #DC2626;
-  --gray:   #64748B;
-  --border: #D1DCF0;
-  --white:  #FFFFFF;
-  --bg:     #F0F4F8;
+  /* BPT Komdigi official colors */
+  --navy:    #1A3A8F;
+  --blue:    #1E50A2;
+  --sky:     #29ABE2;
+  --red:     #C0272D;
+  --yellow:  #F7C200;
+  --white:   #FFFFFF;
+  --bg:      #F0F5FB;
+  --border:  #C8D8EE;
+  --gray:    #5A6E8C;
+  --sky-bg:  #E6F5FC;
+  --navy-bg: #E8EEF8;
 }
 
 @keyframes fadeUp {
@@ -42,7 +42,7 @@ body {
   50%       { opacity: 0.4; }
 }
 
-.fade-up { animation: fadeUp 0.45s ease both; }
+.fade-up   { animation: fadeUp 0.45s ease both; }
 .fade-up-1 { animation: fadeUp 0.45s 0.08s ease both; }
 .fade-up-2 { animation: fadeUp 0.45s 0.16s ease both; }
 .fade-up-3 { animation: fadeUp 0.45s 0.24s ease both; }

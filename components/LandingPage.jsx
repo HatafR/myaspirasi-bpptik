@@ -10,11 +10,33 @@ import SentimentBadge from "@/components/SentimentBadge";
 import CategoryBadge from "@/components/CategoryBadge";
 import Navbar from "@/components/Navbar";
 
+const STATUS_MAP = {
+  "Open":        { bg: "#EFF6FF", color: "#1A3A8F", border: "#C8D8EE",  icon: "🔵" },
+  "On Progress": { bg: "#FFFBEB", color: "#92400E", border: "#FDE68A",  icon: "🟡" },
+  "Resolved":    { bg: "#DCFCE7", color: "#15803D", border: "#BBF7D0",  icon: "🟢" },
+  "Closed":      { bg: "#F1F5F9", color: "#475569", border: "#CBD5E1",  icon: "⚫" },
+};
+
+const StatusBadge = ({ status }) => {
+  const s = STATUS_MAP[status] || STATUS_MAP["Open"];
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      padding: "4px 12px", borderRadius: 999,
+      background: s.bg, color: s.color,
+      border: `1px solid ${s.border}`,
+      fontSize: 12, fontWeight: 700,
+    }}>{s.icon} {status}</span>
+  );
+};
+
 const LandingPage = () => {
   const router = useRouter();
   const [division, setDivision]     = useState("");
   const [message, setMessage]       = useState("");
   const [name, setName]             = useState("");
+  const [email, setEmail]           = useState("");
+  const [emailError, setEmailError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted]   = useState(null);
   const [ticketId, setTicketId]     = useState("");
@@ -25,8 +47,13 @@ const LandingPage = () => {
     setMounted(true);
   }, []);
 
+  const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
   const handleSubmit = async () => {
     if (!division || !message.trim()) return;
+    if (!email.trim()) { setEmailError("Email wajib diisi"); return; }
+    if (!validateEmail(email)) { setEmailError("Format email tidak valid"); return; }
+    setEmailError("");
     setSubmitting(true);
     const { sentimen, kategori } = await analyzeText(message);
     const ticket = {
@@ -34,6 +61,8 @@ const LandingPage = () => {
       division,
       message,
       name: name.trim() || "Anonim",
+      email: email.trim(),
+      status: "Open",
       sentiment: sentimen,
       category: kategori,
       createdAt: new Date().toISOString(),
@@ -49,8 +78,8 @@ const LandingPage = () => {
   const bgStyle = {
     minHeight: "100vh",
     background: "var(--bg)",
-    backgroundImage: `radial-gradient(circle at 20% 20%, rgba(21,101,192,0.06) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(10,33,86,0.05) 0%, transparent 50%)`,
+    backgroundImage: `radial-gradient(circle at 20% 20%, rgba(30,80,162,0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(26,58,143,0.05) 0%, transparent 50%)`,
   };
 
   // Hero banner with gedung photo
@@ -62,13 +91,13 @@ const LandingPage = () => {
       {/* Gedung photo */}
       <img
         src="/gedung-bpptik.jpg"
-        alt="Gedung BPPTIK"
+        alt="Gedung BPT BPT Komdigi"
         style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 60%" }}
       />
       {/* Overlay gradient */}
       <div style={{
         position: "absolute", inset: 0,
-        background: "linear-gradient(135deg, rgba(10,33,86,0.82) 0%, rgba(21,101,192,0.65) 100%)",
+        background: "linear-gradient(135deg, rgba(26,58,143,0.82) 0%, rgba(30,80,162,0.65) 100%)",
       }} />
       {/* Content on top */}
       <div style={{
@@ -87,17 +116,17 @@ const LandingPage = () => {
           backdropFilter: "blur(4px)",
         }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#60C0FF", display: "inline-block", animation: "pulse-dot 2s infinite" }} />
-          Platform Aspirasi Digital · BPPTIK Komdigi
+          Platform Aspirasi Digital · BPT BPT Komdigi BPT Komdigi
         </div>
         <h1 style={{
           fontSize: 28, fontWeight: 900, color: "#fff",
           margin: "0 0 8px", lineHeight: 1.2, letterSpacing: -0.3,
           textShadow: "0 2px 12px rgba(0,0,0,0.3)",
         }}>
-          Sampaikan <span style={{ color: "#7DD3FC" }}>Aspirasi</span> Anda
+          Sampaikan <span style={{ color: "#60C9EC" }}>Aspirasi</span> Anda
         </h1>
         <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
-          Kritik, saran, dan masukan Anda membantu BPPTIK berkembang lebih baik
+          Kritik, saran, dan masukan Anda membantu BPT BPT Komdigi berkembang lebih baik
         </p>
       </div>
     </div>
@@ -112,12 +141,12 @@ const LandingPage = () => {
         <div style={{ maxWidth: 560, margin: "0 auto", padding: "48px 24px 80px" }}>
           <div className="fade-up" style={{
             background: "#fff", borderRadius: 20, overflow: "hidden",
-            boxShadow: "0 4px 32px rgba(10,33,86,0.10)",
-            border: "1px solid var(--border)",
+            boxShadow: "0 4px 32px rgba(26,58,143,0.10)",
+            border: "1px solid #C8D8EE",
           }}>
             {/* Header sukses */}
             <div style={{
-              background: "linear-gradient(135deg, #0A2156, #1565C0)",
+              background: "linear-gradient(135deg, #1A3A8F, #1E50A2)",
               padding: "32px 32px 24px", textAlign: "center",
             }}>
               <div style={{
@@ -139,17 +168,18 @@ const LandingPage = () => {
             <div style={{ padding: "24px 32px 32px" }}>
               <div style={{
                 background: "#F8FAFF", borderRadius: 12, padding: "6px 0",
-                border: "1px solid var(--border)", marginBottom: 24,
+                border: "1px solid #C8D8EE", marginBottom: 24,
               }}>
                 {[
                   ["Nomor Tiket", submitted.id],
                   ["Divisi", `${div?.icon} ${div?.label}`],
                   ["Tanggal", formatDate(submitted.createdAt)],
+                  ["Email", submitted.email],
                 ].map(([label, val], i) => (
                   <div key={label} style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "10px 20px",
-                    borderBottom: i < 2 ? "1px solid var(--border)" : "none",
+                    borderBottom: i < 3 ? "1px solid #C8D8EE" : "none",
                   }}>
                     <span style={{ fontSize: 13, color: "var(--gray)", fontWeight: 500 }}>{label}</span>
                     <span style={{ fontSize: 13, color: "#0F2744", fontWeight: 700, fontFamily: i === 0 ? "monospace" : "inherit" }}>{val}</span>
@@ -157,24 +187,31 @@ const LandingPage = () => {
                 ))}
                 <div style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "10px 20px", borderBottom: "1px solid var(--border)",
+                  padding: "10px 20px", borderBottom: "1px solid #C8D8EE",
                 }}>
                   <span style={{ fontSize: 13, color: "var(--gray)", fontWeight: 500 }}>Sentimen</span>
                   <SentimentBadge sentiment={submitted.sentiment} />
                 </div>
                 <div style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "10px 20px",
+                  padding: "10px 20px", borderBottom: "1px solid #C8D8EE",
                 }}>
                   <span style={{ fontSize: 13, color: "var(--gray)", fontWeight: 500 }}>Kategori</span>
                   <CategoryBadge category={submitted.category} />
+                </div>
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "10px 20px",
+                }}>
+                  <span style={{ fontSize: 13, color: "var(--gray)", fontWeight: 500 }}>Status</span>
+                  <StatusBadge status={submitted.status} />
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: 12 }}>
                 <button onClick={() => router.push("/dashboard")} style={{
                   flex: 1, padding: "13px", borderRadius: 10,
-                  border: "2px solid var(--border)", background: "#fff",
+                  border: "2px solid #C8D8EE", background: "#fff",
                   color: "#0F2744", fontWeight: 700, fontSize: 14,
                   cursor: "pointer", fontFamily: "inherit",
                 }}>
@@ -182,7 +219,7 @@ const LandingPage = () => {
                 </button>
                 <button onClick={() => window.location.reload()} style={{
                   flex: 1, padding: "13px", borderRadius: 10, border: "none",
-                  background: "linear-gradient(135deg, #0A2156, #1565C0)",
+                  background: "linear-gradient(135deg, #1A3A8F, #1E50A2)",
                   color: "#fff", fontWeight: 700, fontSize: 14,
                   cursor: "pointer", fontFamily: "inherit",
                 }}>
@@ -209,10 +246,10 @@ const LandingPage = () => {
 
         {/* Ticket ID preview */}
         <div className="fade-up-1" style={{
-          background: "linear-gradient(135deg, #0A2156 0%, #1565C0 60%, #0288D1 100%)",
+          background: "linear-gradient(135deg, #1A3A8F 0%, #1E50A2 60%, #29ABE2 100%)",
           borderRadius: 16, padding: "18px 24px", marginBottom: 24,
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          boxShadow: "0 4px 24px rgba(10,33,86,0.2)",
+          boxShadow: "0 4px 24px rgba(26,58,143,0.2)",
           position: "relative", overflow: "hidden",
         }}>
           {/* Decorative circles */}
@@ -239,8 +276,8 @@ const LandingPage = () => {
         {/* Form card */}
         <div className="fade-up-2" style={{
           background: "#fff", borderRadius: 20, padding: 32,
-          boxShadow: "0 2px 24px rgba(10,33,86,0.08)",
-          border: "1px solid var(--border)",
+          boxShadow: "0 2px 24px rgba(26,58,143,0.08)",
+          border: "1px solid #C8D8EE",
           display: "flex", flexDirection: "column", gap: 24,
         }}>
 
@@ -252,16 +289,40 @@ const LandingPage = () => {
             <input
               style={{
                 padding: "11px 14px", borderRadius: 10,
-                border: "1.5px solid var(--border)", outline: "none",
+                border: "1.5px solid #C8D8EE", outline: "none",
                 fontSize: 14, color: "#0F2744", fontFamily: "inherit",
                 transition: "border-color 0.15s",
               }}
               placeholder="Nama Anda, atau kosongkan untuk anonim"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onFocus={(e) => e.target.style.borderColor = "#1565C0"}
-              onBlur={(e) => e.target.style.borderColor = "var(--border)"}
+              onFocus={(e) => e.target.style.borderColor = "#1E50A2"}
+              onBlur={(e) => e.target.style.borderColor = "#C8D8EE"}
             />
+          </div>
+
+          {/* Email */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: "#0F2744", letterSpacing: 0.2 }}>
+              Email <span style={{ color: "#C0272D" }}>*</span>
+            </label>
+            <input
+              type="email"
+              style={{
+                padding: "11px 14px", borderRadius: 10,
+                border: emailError ? "1.5px solid #C0272D" : "1.5px solid #C8D8EE",
+                outline: "none", fontSize: 14, color: "#0F2744", fontFamily: "inherit",
+                transition: "border-color 0.15s",
+              }}
+              placeholder="email@contoh.com"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
+              onFocus={(e) => e.target.style.borderColor = "#1E50A2"}
+              onBlur={(e) => e.target.style.borderColor = emailError ? "#C0272D" : "#C8D8EE"}
+            />
+            {emailError && (
+              <span style={{ fontSize: 12, color: "#C0272D", fontWeight: 600 }}>⚠ {emailError}</span>
+            )}
           </div>
 
           {/* Divisi */}
@@ -276,7 +337,7 @@ const LandingPage = () => {
                   <button key={d.id} onClick={() => setDivision(d.id)} style={{
                     display: "flex", alignItems: "center", gap: 12,
                     padding: "14px 16px", borderRadius: 12, cursor: "pointer",
-                    border: active ? `2px solid ${d.color}` : "2px solid var(--border)",
+                    border: active ? `2px solid ${d.color}` : "2px solid #C8D8EE",
                     background: active ? d.bg : "#fff",
                     color: active ? d.color : "#374151",
                     fontFamily: "inherit", transition: "all 0.15s",
@@ -302,11 +363,11 @@ const LandingPage = () => {
               placeholder="Tuliskan kritik, saran, atau komentar Anda di sini..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              onFocus={(e) => e.target.style.borderColor = "#1565C0"}
-              onBlur={(e) => e.target.style.borderColor = "var(--border)"}
+              onFocus={(e) => e.target.style.borderColor = "#1E50A2"}
+              onBlur={(e) => e.target.style.borderColor = "#C8D8EE"}
               style={{
                 padding: "12px 14px", borderRadius: 10,
-                border: "1.5px solid var(--border)", outline: "none",
+                border: "1.5px solid #C8D8EE", outline: "none",
                 fontSize: 14, color: "#0F2744", resize: "vertical",
                 fontFamily: "inherit", lineHeight: 1.7, transition: "border-color 0.15s",
               }}
@@ -330,11 +391,11 @@ const LandingPage = () => {
           {/* AI info */}
           <div style={{
             display: "flex", gap: 12, alignItems: "flex-start",
-            background: "#F0F7FF", borderRadius: 10, padding: "14px 16px",
-            border: "1px solid #BFDBFE",
+            background: "#EBF4FB", borderRadius: 10, padding: "14px 16px",
+            border: "1px solid #C8D8EE",
           }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>🤖</span>
-            <div style={{ fontSize: 13, color: "#1D4ED8", lineHeight: 1.7 }}>
+            <div style={{ fontSize: 13, color: "#1A3A8F", lineHeight: 1.7 }}>
               <strong>Analisis AI Otomatis</strong> — Pesan Anda akan dianalisis menggunakan model ML
               untuk mendeteksi <strong>sentimen</strong> dan <strong>kategori</strong> secara otomatis.
             </div>
@@ -348,12 +409,12 @@ const LandingPage = () => {
               padding: "15px", borderRadius: 12, border: "none",
               background: !division || !message.trim() || submitting
                 ? "#CBD5E1"
-                : "linear-gradient(135deg, #0A2156, #1565C0)",
+                : "linear-gradient(135deg, #1A3A8F, #1E50A2)",
               color: "#fff", fontWeight: 800, fontSize: 15,
               cursor: !division || !message.trim() || submitting ? "not-allowed" : "pointer",
               fontFamily: "inherit", letterSpacing: 0.3,
               boxShadow: !division || !message.trim() || submitting
-                ? "none" : "0 4px 16px rgba(21,101,192,0.3)",
+                ? "none" : "0 4px 16px rgba(30,80,162,0.3)",
               transition: "all 0.2s",
             }}
           >
@@ -363,7 +424,7 @@ const LandingPage = () => {
 
         {/* Footer */}
         <div className="fade-up-3" style={{ textAlign: "center", marginTop: 24, fontSize: 12, color: "var(--gray)" }}>
-          © 2026 BPPTIK · Kementerian Komunikasi dan Digital Republik Indonesia
+          © 2026 BPT BPT Komdigi · Kementerian Komunikasi dan Digital Republik Indonesia
         </div>
       </div>
     </div>

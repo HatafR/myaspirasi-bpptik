@@ -2,7 +2,7 @@ const CategoryBadge = ({ category }) => {
   const map = {
     Kritik:   { bg: "#FEF2F2", color: "#991B1B", icon: "🔴", border: "#FECACA" },
     Saran:    { bg: "#FFFBEB", color: "#92400E", icon: "💡", border: "#FDE68A" },
-    Komentar: { bg: "#EFF6FF", color: "#1D4ED8", icon: "💬", border: "#BFDBFE" },
+    Komentar: { bg: "#E8EEF8", color: "#1A3A8F", icon: "💬", border: "#C8D8EE" },
   };
   const s = map[category] || map["Komentar"];
   return (

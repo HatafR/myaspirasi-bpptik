@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "MyAspirasi — BPPTIK Komdigi",
-  description: "Platform aspirasi digital Balai Pelatihan dan Pengembangan Teknologi Informasi dan Komunikasi",
+  title: "MyAspirasi — BPT Komdigi",
+  description: "Platform aspirasi digital Balai Pelatihan Talenta Komunikasi dan Digital",
 };
 
 export default function RootLayout({ children }) {
