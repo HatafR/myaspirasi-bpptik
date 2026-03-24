@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── ENUM ──────────────────────────────────────────────────────────────────────
+
+enum TicketStatus {
+  Open
+  OnProgress
+  Resolved
+  Closed
+}
+
+enum Sentiment {
+  Positif
+  Netral
+  Negatif
+}
+
+enum Category {
+  Kritik
+  Saran
+  Komentar
+}
+
+enum AdminRole {
+  admin_general
+  admin_layanan
+}
+
+// ── MODELS ────────────────────────────────────────────────────────────────────
+
+model Ticket {
+  id         String       @id // format: TKT-YYYYMMDD-XXXX
+  name       String
+  email      String
+  division   String
+  message    String       @db.Text
+  status     TicketStatus @default(Open)
+  sentiment  Sentiment
+  category   Category
+  assignedTo String?      // id admin yang ditugaskan
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  // Relations
+  history    TicketHistory[]
+  rating     Rating?
+  tanggapan  Tanggapan[]
+  replies    AdminReply[]
+
+  @@map("tickets")
+}
+
+model TicketHistory {
+  id           String   @id @default(cuid())
+  ticketId     String
+  status       TicketStatus
+  changedBy    String   // nama admin
+  changedByRole String  // role admin
+  changedAt    DateTime @default(now())
+
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_history")
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  ticketId  String   @unique
+  rating    Int      // 1-5
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("ratings")
+}
+
+model Tanggapan {
+  id        String   @id @default(cuid())
+  ticketId  String
+  isi       String   @db.Text
+  createdAt DateTime @default(now())
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("tanggapan")
+}
+
+model AdminReply {
+  id        String   @id @default(cuid())
+  ticketId  String
+  adminId   String
+  adminName String
+  isi       String   @db.Text
+  createdAt DateTime @default(now())
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  admin     Admin    @relation(fields: [adminId], references: [id])
+
+  @@map("admin_replies")
+}
+
+model Admin {
+  id        String    @id @default(cuid())
+  username  String    @unique
+  email     String    @unique
+  password  String    // hashed
+  name      String
+  role      AdminRole
+  division  String?   // null untuk admin_general
+  isActive  Boolean   @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  replies   AdminReply[]
+
+  @@map("admins")
+}

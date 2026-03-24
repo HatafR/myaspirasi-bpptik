@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import DIVISIONS from "@/constants/divisions";
+import LAYANAN from "@/constants/layanan";
 import formatDate from "@/utils/formatDate";
 
 const STATUS_MAP = {
@@ -43,7 +44,7 @@ const TrackPage = () => {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const handleTrack = () => {
+  const handleTrack = async () => {
     const trimmed = input.trim().toUpperCase();
     if (!trimmed) { setError("Masukkan nomor tiket terlebih dahulu"); return; }
     if (!trimmed.startsWith("TKT-")) { setError("Format nomor tiket tidak valid. Contoh: TKT-20260308-1234"); return; }
@@ -52,45 +53,52 @@ const TrackPage = () => {
     setError("");
     setResult(null);
 
-    // TODO MongoDB: fetch GET /api/tickets/:id
-    setTimeout(() => {
-      const stored = JSON.parse(localStorage.getItem("tickets") || "[]");
-      const found = stored.find((t) => t.id.toUpperCase() === trimmed);
-      if (found) {
-        // Cek auto-close: jika Resolved lebih dari 3 hari tanpa tanggapan
-        const tanggapanList = JSON.parse(localStorage.getItem("tanggapan") || "[]");
-        const hasTanggapan = tanggapanList.some(t => t.ticketId === found.id);
-        
-        if (found.status === "Resolved" && !hasTanggapan) {
-          const resolvedHistory = JSON.parse(localStorage.getItem("ticket_history") || "[]")
-            .filter(h => h.ticketId === found.id && h.status === "Resolved");
-          
-          if (resolvedHistory.length > 0) {
-            const resolvedAt = new Date(resolvedHistory[0].changedAt);
-            const daysSince = (Date.now() - resolvedAt.getTime()) / (1000 * 60 * 60 * 24);
-            
-            if (daysSince > 3) {
-              // Auto-close
-              const stored2 = JSON.parse(localStorage.getItem("tickets") || "[]");
-              const updated2 = stored2.map(t => t.id === found.id ? { ...t, status: "Closed" } : t);
-              localStorage.setItem("tickets", JSON.stringify(updated2));
-              found.status = "Closed";
-            }
+    try {
+      const res = await fetch(`/api/tickets/${trimmed}`);
+      const data = await res.json();
+
+      if (!data.success || !data.data) {
+        setError("Nomor tiket tidak ditemukan. Periksa kembali nomor tiket Anda.");
+        setLoading(false);
+        return;
+      }
+
+      const found = data.data;
+
+      // Cek auto-close: jika Resolved lebih dari 3 hari tanpa tanggapan
+      if (found.status === "Resolved") {
+        const hasTanggapan = found.tanggapan && found.tanggapan.length > 0;
+        const resolvedHistory = (found.history || []).filter(h => h.status === "Resolved");
+
+        if (!hasTanggapan && resolvedHistory.length > 0) {
+          const resolvedAt = new Date(resolvedHistory[0].changedAt);
+          const daysSince = (Date.now() - resolvedAt.getTime()) / (1000 * 60 * 60 * 24);
+
+          if (daysSince > 3) {
+            // Auto-close via API
+            await fetch(`/api/tickets/${trimmed}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "Closed", changedBy: "Sistem", changedByRole: "Auto" }),
+            });
+            found.status = "Closed";
           }
         }
 
-        const alreadyTanggapan = tanggapanList.some(t => t.ticketId === found.id);
-        setTanggapanSent(alreadyTanggapan);
-        setResult(found);
-      } else {
-        setError("Nomor tiket tidak ditemukan. Periksa kembali nomor tiket Anda.");
+        setTanggapanSent(hasTanggapan);
       }
-      setLoading(false);
-    }, 800);
+
+      setResult(found);
+    } catch (err) {
+      console.error("Track error:", err);
+      setError("Terjadi kesalahan. Silakan coba lagi.");
+    }
+
+    setLoading(false);
   };
 
   const currentStep = result ? STEPS.indexOf(result.status || "Open") : -1;
-  const div = result ? DIVISIONS.find((d) => d.id === result.division) : null;
+  const div = result ? (LAYANAN.find((d) => d.id === result.division) || DIVISIONS.find((d) => d.id === result.division)) : null;
 
   const bgStyle = {
     minHeight: "100vh",
@@ -296,8 +304,7 @@ const TrackPage = () => {
 
             {/* Tanggapan User */}
             {result.status === "Resolved" && (() => {
-              const history = JSON.parse(localStorage.getItem("ticket_history") || "[]")
-                .filter(h => h.ticketId === result.id && h.status === "Resolved");
+              const history = (result.history || []).filter(h => h.status === "Resolved");
               const resolvedAt = history.length > 0 ? new Date(history[0].changedAt) : new Date(result.createdAt);
               const daysSince = (Date.now() - resolvedAt.getTime()) / (1000 * 60 * 60 * 24);
               const sisaHari = Math.max(0, Math.ceil(3 - daysSince));
@@ -342,14 +349,22 @@ const TrackPage = () => {
                         onBlur={e => e.target.style.borderColor = "#C8D8EE"}
                       />
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           if (!tanggapan.trim()) return;
-                          const entry = { ticketId: result.id, isi: tanggapan.trim(), createdAt: new Date().toISOString() };
-                          const existing = JSON.parse(localStorage.getItem("tanggapan") || "[]");
-                          localStorage.setItem("tanggapan", JSON.stringify([entry, ...existing]));
-                          setTanggapanSent(true);
-                          setTanggapan("");
-                          showToast("✅ Tanggapan berhasil dikirim!");
+                          try {
+                            const res = await fetch(`/api/tickets/${result.id}/tanggapan`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ isi: tanggapan.trim() }),
+                            });
+                            const data = await res.json();
+                            if (!data.success) throw new Error(data.message);
+                            setTanggapanSent(true);
+                            setTanggapan("");
+                            showToast("✅ Tanggapan berhasil dikirim!");
+                          } catch (err) {
+                            showToast("❌ Gagal mengirim tanggapan", "error");
+                          }
                         }}
                         disabled={!tanggapan.trim()}
                         style={{ marginTop:10, padding:"9px 20px", borderRadius:9, border:"none",

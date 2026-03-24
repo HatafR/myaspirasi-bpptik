@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DIVISIONS from "@/constants/divisions";
+import LAYANAN from "@/constants/layanan";
 import analyzeText from "@/services/analyzeText";
 import generateTicketId from "@/utils/generateTicketId";
 import formatDate from "@/utils/formatDate";
@@ -41,6 +42,10 @@ const LandingPage = () => {
   const [submitted, setSubmitted]   = useState(null);
   const [ticketId, setTicketId]     = useState("");
   const [mounted, setMounted]       = useState(false);
+  const [subject, setSubject]       = useState("");
+  const [subjectError, setSubjectError] = useState("");
+  const [attachment, setAttachment] = useState(null);
+  const [attachError, setAttachError] = useState("");
 
   useEffect(() => {
     setTicketId(generateTicketId());
@@ -51,6 +56,8 @@ const LandingPage = () => {
 
   const handleSubmit = async () => {
     if (!division || !message.trim()) return;
+    if (!subject.trim()) { setSubjectError("Subjek wajib diisi"); return; }
+    setSubjectError("");
     if (!email.trim()) { setEmailError("Email wajib diisi"); return; }
     if (!validateEmail(email)) { setEmailError("Format email tidak valid"); return; }
     setEmailError("");
@@ -59,6 +66,7 @@ const LandingPage = () => {
     const ticket = {
       id: ticketId,
       division,
+      subject: subject.trim(),
       message,
       name: name.trim() || "Anonim",
       email: email.trim(),
@@ -134,7 +142,7 @@ const LandingPage = () => {
 
   // ── Sukses ──────────────────────────────────────────────────────────────────
   if (submitted) {
-    const div = DIVISIONS.find((d) => d.id === submitted.division);
+    const div = LAYANAN.find((d) => d.id === submitted.division) || DIVISIONS.find((d) => d.id === submitted.division);
     return (
       <div style={bgStyle}>
         <Navbar />
@@ -172,6 +180,7 @@ const LandingPage = () => {
               }}>
                 {[
                   ["Nomor Tiket", submitted.id],
+                  ["Subjek", submitted.subject || "-"],
                   ["Divisi", `${div?.icon} ${div?.label}`],
                   ["Tanggal", formatDate(submitted.createdAt)],
                   ["Email", submitted.email],
@@ -325,31 +334,33 @@ const LandingPage = () => {
             )}
           </div>
 
-          {/* Divisi */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* Layanan / Divisi */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <label style={{ fontSize: 13, fontWeight: 700, color: "#0F2744", letterSpacing: 0.2 }}>
-              Divisi <span style={{ color: "#DC2626" }}>*</span>
+              Kategori Layanan <span style={{ color: "#C0272D" }}>*</span>
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {DIVISIONS.map((d) => {
-                const active = division === d.id;
-                return (
-                  <button key={d.id} onClick={() => setDivision(d.id)} style={{
-                    display: "flex", alignItems: "center", gap: 12,
-                    padding: "14px 16px", borderRadius: 12, cursor: "pointer",
-                    border: active ? `2px solid ${d.color}` : "2px solid #C8D8EE",
-                    background: active ? d.bg : "#fff",
-                    color: active ? d.color : "#374151",
-                    fontFamily: "inherit", transition: "all 0.15s",
-                    boxShadow: active ? `0 0 0 3px ${d.color}22` : "none",
-                  }}>
-                    <span style={{ fontSize: 22 }}>{d.icon}</span>
-                    <span style={{ fontWeight: 700, fontSize: 14 }}>{d.label}</span>
-                    {active && <span style={{ marginLeft: "auto", fontSize: 16 }}>✓</span>}
-                  </button>
-                );
-              })}
-            </div>
+            <select
+              value={division}
+              onChange={(e) => setDivision(e.target.value)}
+              style={{
+                padding: "11px 14px", borderRadius: 10,
+                border: !division ? "1.5px solid #C8D8EE" : "1.5px solid #1E50A2",
+                outline: "none", fontSize: 14, color: division ? "#0F2744" : "#94A3B8",
+                fontFamily: "inherit", background: "#fff", cursor: "pointer",
+                appearance: "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235A6E8C' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 14px center",
+                paddingRight: 36,
+              }}
+              onFocus={(e) => e.target.style.borderColor = "#1E50A2"}
+              onBlur={(e) => e.target.style.borderColor = division ? "#1E50A2" : "#C8D8EE"}
+            >
+              <option value="" disabled>-- Pilih kategori layanan --</option>
+              {LAYANAN.map((l) => (
+                <option key={l.id} value={l.id}>{l.icon} {l.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Pesan */}
@@ -388,17 +399,60 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* AI info */}
-          <div style={{
-            display: "flex", gap: 12, alignItems: "flex-start",
-            background: "#EBF4FB", borderRadius: 10, padding: "14px 16px",
-            border: "1px solid #C8D8EE",
-          }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>🤖</span>
-            <div style={{ fontSize: 13, color: "#1A3A8F", lineHeight: 1.7 }}>
-              <strong>Analisis AI Otomatis</strong> — Pesan Anda akan dianalisis menggunakan model ML
-              untuk mendeteksi <strong>sentimen</strong> dan <strong>kategori</strong> secara otomatis.
+          {/* Attachment */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: "#0F2744", letterSpacing: 0.2 }}>
+              Lampiran <span style={{ color: "#5A6E8C", fontWeight: 500 }}>(opsional, maks. 2MB)</span>
+            </label>
+            <div
+              onClick={() => document.getElementById("file-upload").click()}
+              style={{
+                padding: "16px 20px", borderRadius: 10, cursor: "pointer",
+                border: attachError ? "2px dashed #C0272D" : attachment ? "2px dashed #1E50A2" : "2px dashed #C8D8EE",
+                background: attachment ? "#E8EEF8" : "#F8FAFF",
+                display: "flex", alignItems: "center", gap: 12,
+                transition: "all 0.15s",
+              }}
+            >
+              <span style={{ fontSize: 28 }}>{attachment ? "📎" : "📁"}</span>
+              <div>
+                {attachment ? (
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#1A3A8F" }}>{attachment.name}</div>
+                    <div style={{ fontSize: 11, color: "#5A6E8C" }}>{(attachment.size / 1024).toFixed(1)} KB</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#0F2744" }}>Klik untuk upload file</div>
+                    <div style={{ fontSize: 11, color: "#5A6E8C" }}>JPG, PNG, PDF, DOC (maks. 2MB)</div>
+                  </div>
+                )}
+              </div>
+              {attachment && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setAttachment(null); setAttachError(""); }}
+                  style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer",
+                    fontSize: 18, color: "#C0272D" }}>✕</button>
+              )}
             </div>
+            <input
+              id="file-upload" type="file" style={{ display: "none" }}
+              accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 2 * 1024 * 1024) {
+                  setAttachError("Ukuran file maksimal 2MB");
+                  setAttachment(null);
+                  return;
+                }
+                setAttachError("");
+                setAttachment(file);
+              }}
+            />
+            {attachError && (
+              <span style={{ fontSize: 12, color: "#C0272D", fontWeight: 600 }}>⚠ {attachError}</span>
+            )}
           </div>
 
           {/* Submit */}
