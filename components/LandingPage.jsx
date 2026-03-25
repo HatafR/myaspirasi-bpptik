@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import DIVISIONS from "@/constants/divisions";
+// import DIVISIONS from "@/constants/divisions";
 import LAYANAN from "@/constants/layanan";
 import analyzeText from "@/services/analyzeText";
 import generateTicketId from "@/utils/generateTicketId";
@@ -34,6 +34,7 @@ const StatusBadge = ({ status }) => {
 const LandingPage = () => {
   const router = useRouter();
   const [division, setDivision]     = useState("");
+  const [layanan, setLayanan]       = useState("");
   const [message, setMessage]       = useState("");
   const [name, setName]             = useState("");
   const [email, setEmail]           = useState("");
@@ -55,32 +56,37 @@ const LandingPage = () => {
   const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
   const handleSubmit = async () => {
-    if (!division || !message.trim()) return;
-    if (!subject.trim()) { setSubjectError("Subjek wajib diisi"); return; }
-    setSubjectError("");
-    if (!email.trim()) { setEmailError("Email wajib diisi"); return; }
-    if (!validateEmail(email)) { setEmailError("Format email tidak valid"); return; }
-    setEmailError("");
-    setSubmitting(true);
-    const { sentimen, kategori } = await analyzeText(message);
-    const ticket = {
-      id: ticketId,
-      division,
-      subject: subject.trim(),
-      message,
-      name: name.trim() || "Anonim",
-      email: email.trim(),
-      status: "Open",
-      sentiment: sentimen,
-      category: kategori,
-      createdAt: new Date().toISOString(),
-    };
-    // TODO MongoDB: POST /api/tickets
-    const existing = JSON.parse(localStorage.getItem("tickets") || "[]");
-    localStorage.setItem("tickets", JSON.stringify([ticket, ...existing]));
-    setSubmitted(ticket);
-    setSubmitting(false);
+  if (!layanan || !message.trim()) return;
+  if (!subject.trim()) { setSubjectError("Subjek wajib diisi"); return; }
+  setSubjectError("");
+
+  if (!email.trim()) { setEmailError("Email wajib diisi"); return; }
+  if (!validateEmail(email)) { setEmailError("Format email tidak valid"); return; }
+  setEmailError("");
+
+  setSubmitting(true);
+
+  const { sentimen, kategori } = await analyzeText(message);
+
+  const ticket = {
+    id: ticketId,
+    division: layanan, // <-- penting
+    subject: subject.trim(),
+    message,
+    name: name.trim() || "Anonim",
+    email: email.trim(),
+    status: "Open",
+    sentiment: sentimen,
+    category: kategori,
+    createdAt: new Date().toISOString(),
   };
+
+  const existing = JSON.parse(localStorage.getItem("tickets") || "[]");
+  localStorage.setItem("tickets", JSON.stringify([ticket, ...existing]));
+
+  setSubmitted(ticket);
+  setSubmitting(false);
+};
 
   // BG pattern
   const bgStyle = {
@@ -340,12 +346,12 @@ const LandingPage = () => {
               Kategori Layanan <span style={{ color: "#C0272D" }}>*</span>
             </label>
             <select
-              value={division}
-              onChange={(e) => setDivision(e.target.value)}
+              value={layanan}
+              onChange={(e) => setLayanan(e.target.value)}
               style={{
                 padding: "11px 14px", borderRadius: 10,
-                border: !division ? "1.5px solid #C8D8EE" : "1.5px solid #1E50A2",
-                outline: "none", fontSize: 14, color: division ? "#0F2744" : "#94A3B8",
+                border: !layanan ? "1.5px solid #C8D8EE" : "1.5px solid #1E50A2",
+                outline: "none", fontSize: 14, color: layanan ? "#0F2744" : "#94A3B8",
                 fontFamily: "inherit", background: "#fff", cursor: "pointer",
                 appearance: "none",
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235A6E8C' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
@@ -361,6 +367,28 @@ const LandingPage = () => {
                 <option key={l.id} value={l.id}>{l.icon} {l.label}</option>
               ))}
             </select>
+          </div>
+
+          {/* Subjek */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: "#0F2744" }}>
+              Subjek <span style={{ color: "#C0272D" }}>*</span>
+            </label>
+            <input
+              value={subject}
+              onChange={(e) => { setSubject(e.target.value); setSubjectError(""); }}
+              placeholder="Judul singkat aspirasi"
+              style={{
+                padding: "11px 14px",
+                borderRadius: 10,
+                border: subjectError ? "1.5px solid #C0272D" : "1.5px solid #C8D8EE",
+                outline: "none",
+                fontSize: 14,
+              }}
+            />
+            {subjectError && (
+              <span style={{ fontSize: 12, color: "#C0272D" }}>⚠ {subjectError}</span>
+            )}
           </div>
 
           {/* Pesan */}
@@ -458,16 +486,16 @@ const LandingPage = () => {
           {/* Submit */}
           <button
             onClick={handleSubmit}
-            disabled={!division || !message.trim() || submitting}
+            disabled={!layanan || !message.trim() || !subject.trim() || submitting}
             style={{
               padding: "15px", borderRadius: 12, border: "none",
-              background: !division || !message.trim() || submitting
+              background: !layanan || !message.trim() || !subject.trim() || submitting
                 ? "#CBD5E1"
                 : "linear-gradient(135deg, #1A3A8F, #1E50A2)",
               color: "#fff", fontWeight: 800, fontSize: 15,
-              cursor: !division || !message.trim() || submitting ? "not-allowed" : "pointer",
+              cursor: !layanan || !message.trim() || submitting ? "not-allowed" : "pointer",
               fontFamily: "inherit", letterSpacing: 0.3,
-              boxShadow: !division || !message.trim() || submitting
+              boxShadow: !layanan || !message.trim() || submitting
                 ? "none" : "0 4px 16px rgba(30,80,162,0.3)",
               transition: "all 0.2s",
             }}
