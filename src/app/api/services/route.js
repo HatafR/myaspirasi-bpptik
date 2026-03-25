@@ -1,0 +1,20 @@
+import { prisma } from "@/lib/prisma";
+
+export async function GET() {
+  try {
+    const services = await prisma.service.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+    });
+
+    return Response.json({
+      success: true,
+      data: services,
+    });
+  } catch (err) {
+    return Response.json(
+      { success: false, message: err.message },
+      { status: 500 },
+    );
+  }
+}

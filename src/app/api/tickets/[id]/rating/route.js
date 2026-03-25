@@ -1,20 +1,19 @@
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/auth";
 
 // ==========================
-// GET /api/tickets/:id/response
+// GET /api/tickets/:id/rating
 // ==========================
 export async function GET(req, { params }) {
   try {
     const { id } = params;
 
-    const response = await prisma.ticketResponse.findUnique({
+    const rating = await prisma.rating.findUnique({
       where: { ticketId: id },
     });
 
     return Response.json({
       success: true,
-      data: response,
+      data: rating,
     });
   } catch (err) {
     return Response.json(
@@ -28,18 +27,17 @@ export async function GET(req, { params }) {
 }
 
 // ==========================
-// POST /api/tickets/:id/response
+// POST /api/tickets/:id/rating
 // ==========================
 export async function POST(req, { params }) {
   try {
-    const user = requireAuth(req);
-    requireRole(user, ["SERVICE_ADMIN", "SUPER_ADMIN"]);
-
     const { id } = params;
     const body = await req.json();
+    const { rating, comment } = body;
 
-    if (!body.content?.trim()) {
-      throw new Error("Response content is required");
+    // ✅ VALIDATION
+    if (!rating || rating < 1 || rating > 5) {
+      throw new Error("Rating must be between 1-5");
     }
 
     const ticket = await prisma.ticket.findUnique({
@@ -50,26 +48,27 @@ export async function POST(req, { params }) {
       throw new Error("Ticket not found");
     }
 
-    // ❗ enforce hanya boleh respon kalau sudah assigned / in_progress
-    if (!["ASSIGNED", "IN_PROGRESS", "RESOLVED"].includes(ticket.status)) {
-      throw new Error("Ticket not ready for response");
+    // ✅ STATUS CHECK (ENUM BARU)
+    if (!["RESOLVED", "CLOSED"].includes(ticket.status)) {
+      throw new Error("Rating only allowed after ticket is resolved or closed");
     }
 
-    const response = await prisma.ticketResponse.upsert({
-      where: { ticketId: id },
-      update: {
-        content: body.content.trim(),
-      },
-      create: {
+    // ✅ CREATE (rely on unique constraint)
+    const result = await prisma.rating.create({
+      data: {
         ticketId: id,
-        content: body.content.trim(),
+        score: rating,
+        comment: comment?.trim() || null,
       },
     });
 
-    return Response.json({
-      success: true,
-      data: response,
-    });
+    return Response.json(
+      {
+        success: true,
+        data: result,
+      },
+      { status: 201 },
+    );
   } catch (err) {
     return Response.json(
       {
@@ -77,7 +76,12 @@ export async function POST(req, { params }) {
         message: err.message,
       },
       {
-        status: err.message === "Ticket not found" ? 404 : 400,
+        status:
+          err.message === "Ticket not found"
+            ? 404
+            : err.message.includes("Unique constraint")
+              ? 409
+              : 400,
       },
     );
   }

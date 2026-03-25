@@ -2,6 +2,7 @@ import "dotenv/config";
 import pkg from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcrypt";
+import { UserRole } from "@prisma/client";
 
 const { PrismaClient } = pkg;
 
@@ -24,13 +25,14 @@ async function main() {
     update: {
       password: hashedPasswordSuper,
       username: "admin.super",
+      role: UserRole.SUPER_ADMIN,
     },
     create: {
       name: "Super Admin",
       email: "admin@ticketing.local",
       username: "admin.super",
       password: hashedPasswordSuper,
-      role: "super_admin",
+      role: UserRole.SUPER_ADMIN,
     },
   });
 
@@ -41,13 +43,14 @@ async function main() {
     update: {
       password: hashedPasswordIt,
       username: "admin.it",
+      role: UserRole.SERVICE_ADMIN,
     },
     create: {
       name: "Admin IT",
       username: "admin.it",
       email: "it@ticketing.local",
       password: hashedPasswordIt,
-      role: "service_admin",
+      role: UserRole.SERVICE_ADMIN,
     },
   });
 
