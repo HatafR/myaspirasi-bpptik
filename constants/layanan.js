@@ -1,0 +1,88 @@
+// constants/layanan.js
+// Daftar layanan BPT Komdigi (sementara — TODO: ganti dengan data resmi dari klien)
+
+const LAYANAN = [
+  {
+    id: "pelatihan-vokasi",
+    label: "Pelatihan Vokasi & Graduate Academy",
+    pic: "pic_vokasi",
+    icon: "🎓",
+    color: "#1A3A8F",
+    bg: "#E8EEF8",
+    desc: "Pelatihan vocational school, fresh graduate, dan thematic academy",
+  },
+  {
+    id: "pelatihan-digital",
+    label: "Pelatihan Digital Entrepreneurship",
+    pic: "pic_digital",
+    icon: "💻",
+    color: "#0369A1",
+    bg: "#E0F2FE",
+    desc: "Program pelatihan kewirausahaan digital",
+  },
+  {
+    id: "pelatihan-pemerintah",
+    label: "Pelatihan Government Transformation",
+    pic: "pic_government",
+    icon: "🏛️",
+    color: "#1E50A2",
+    bg: "#EFF6FF",
+    desc: "Program transformasi pemerintahan dan birokrasi digital",
+  },
+  {
+    id: "keuangan",
+    label: "Layanan Keuangan & Administrasi",
+    pic: "pic_keuangan",
+    icon: "💰",
+    color: "#15803D",
+    bg: "#DCFCE7",
+    desc: "Pertanyaan terkait keuangan, pembayaran, dan administrasi",
+  },
+  {
+    id: "kepegawaian",
+    label: "Layanan Kepegawaian",
+    pic: "pic_kepegawaian",
+    icon: "👥",
+    color: "#7C3AED",
+    bg: "#F3E8FF",
+    desc: "Pertanyaan terkait kepegawaian dan SDM",
+  },
+  {
+    id: "kerjasama",
+    label: "Layanan Kerjasama & Kemitraan",
+    pic: "pic_kerjasama",
+    icon: "🤝",
+    color: "#C0272D",
+    bg: "#FEF2F2",
+    desc: "Pertanyaan terkait kerjasama dan kemitraan institusi",
+  },
+  {
+    id: "sarana",
+    label: "Layanan Sarana & Prasarana",
+    pic: "pic_sarana",
+    icon: "🏢",
+    color: "#92400E",
+    bg: "#FFFBEB",
+    desc: "Pertanyaan terkait fasilitas dan sarana prasarana",
+  },
+  {
+    id: "program",
+    label: "Layanan Program & Perencanaan",
+    pic: "pic_program",
+    icon: "📋",
+    color: "#0F766E",
+    bg: "#F0FDFA",
+    desc: "Pertanyaan terkait program dan perencanaan kegiatan",
+  },
+  {
+    id: "umum",
+    label: "Pertanyaan Umum",
+    pic: "pic_umum",
+    icon: "❓",
+    color: "#475569",
+    bg: "#F1F5F9",
+    desc: "Pertanyaan umum yang tidak termasuk kategori di atas",
+  },
+];
+
+export default LAYANAN;

@@ -17,6 +17,74 @@ const prisma = new PrismaClient({
 const hashedPasswordSuper = await bcrypt.hash("super-admin-123", 10);
 const hashedPasswordIt = await bcrypt.hash("it-admin-123", 10);
 
+const SERVICES = [
+  {
+    name: "Pelatihan Vokasi & Graduate Academy",
+    description:
+      "Pelatihan vocational school, fresh graduate, dan thematic academy",
+    icon: "🎓",
+    color: "#1A3A8F",
+    bgColor: "#E8EEF8",
+  },
+  {
+    name: "Pelatihan Digital Entrepreneurship",
+    description: "Program pelatihan kewirausahaan digital",
+    icon: "💻",
+    color: "#0369A1",
+    bgColor: "#E0F2FE",
+  },
+  {
+    name: "Pelatihan Government Transformation",
+    description: "Program transformasi pemerintahan dan birokrasi digital",
+    icon: "🏛️",
+    color: "#1E50A2",
+    bgColor: "#EFF6FF",
+  },
+  {
+    name: "Layanan Keuangan & Administrasi",
+    description: "Pertanyaan terkait keuangan, pembayaran, dan administrasi",
+    icon: "💰",
+    color: "#15803D",
+    bgColor: "#DCFCE7",
+  },
+  {
+    name: "Layanan Kepegawaian",
+    description: "Pertanyaan terkait kepegawaian dan SDM",
+    icon: "👥",
+    color: "#7C3AED",
+    bgColor: "#F3E8FF",
+  },
+  {
+    name: "Layanan Kerjasama & Kemitraan",
+    description: "Pertanyaan terkait kerjasama dan kemitraan institusi",
+    icon: "🤝",
+    color: "#C0272D",
+    bgColor: "#FEF2F2",
+  },
+  {
+    name: "Layanan Sarana & Prasarana",
+    description: "Pertanyaan terkait fasilitas dan sarana prasarana",
+    icon: "🏢",
+    color: "#92400E",
+    bgColor: "#FFFBEB",
+  },
+  {
+    name: "Layanan Program & Perencanaan",
+    description: "Pertanyaan terkait program dan perencanaan kegiatan",
+    icon: "📋",
+    color: "#0F766E",
+    bgColor: "#F0FDFA",
+  },
+  {
+    name: "Pertanyaan Umum",
+    description: "Pertanyaan umum yang tidak termasuk kategori di atas",
+    icon: "❓",
+    color: "#475569",
+    bgColor: "#F1F5F9",
+    requiresManualAssignment: true,
+  },
+];
+
 async function main() {
   const admin = await prisma.user.upsert({
     where: {
@@ -83,6 +151,23 @@ async function main() {
     create: {
       name: "Lainnya",
       requiresManualAssignment: true,
+    },
+  });
+}
+
+for (const service of SERVICES) {
+  await prisma.service.upsert({
+    where: { name: service.name },
+    update: {
+      description: service.description,
+      icon: service.icon,
+      color: service.color,
+      bgColor: service.bgColor,
+      requiresManualAssignment: service.requiresManualAssignment ?? false,
+    },
+    create: {
+      ...service,
+      requiresManualAssignment: service.requiresManualAssignment ?? false,
     },
   });
 }

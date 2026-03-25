@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DIVISIONS from "@/constants/divisions";
+import LAYANAN from "@/constants/layanan";
 import formatDate from "@/utils/formatDate";
 import SentimentBadge from "@/components/SentimentBadge";
 import CategoryBadge from "@/components/CategoryBadge";
@@ -153,7 +154,7 @@ const AdminDashboard = () => {
     router.push("/login");
   };
 
-  const div = (id) => DIVISIONS.find(d => d.id === id);
+  const div = (id) => LAYANAN.find(d => d.id === id) || DIVISIONS.find(d => d.id === id);
 
   // ── Sidebar nav items
   const navItems = [

@@ -4,58 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 // ── Dummy users (TODO MongoDB: ganti dengan fetch /api/auth/login) ────────────
-const DUMMY_USERS = [
-  {
-    id: "u001",
-    username: "admin.general",
-    email: "admin@bptkomdigi.go.id",
-    password: "admin123",
-    name: "Administrator General",
-    role: "admin_general",
-    roleLabel: "Admin General",
-  },
-  {
-    id: "u002",
-    username: "admin.it",
-    email: "it@bptkomdigi.go.id",
-    password: "it123",
-    name: "Admin Layanan IT",
-    role: "admin_layanan",
-    roleLabel: "Admin Layanan · IT",
-    division: "it",
-  },
-  {
-    id: "u003",
-    username: "admin.humas",
-    email: "humas@bptkomdigi.go.id",
-    password: "humas123",
-    name: "Admin Layanan Humas",
-    role: "admin_layanan",
-    roleLabel: "Admin Layanan · Humas",
-    division: "humas",
-  },
-  {
-    id: "u004",
-    username: "admin.finance",
-    email: "finance@bptkomdigi.go.id",
-    password: "finance123",
-    name: "Admin Layanan Finance",
-    role: "admin_layanan",
-    roleLabel: "Admin Layanan · Finance",
-    division: "finance",
-  },
-  {
-    id: "u005",
-    username: "admin.audit",
-    email: "audit@bptkomdigi.go.id",
-    password: "audit123",
-    name: "Admin Layanan Audit",
-    role: "admin_layanan",
-    roleLabel: "Admin Layanan · Audit",
-    division: "audit",
-  },
-];
-
 const LoginPage = () => {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
@@ -72,33 +20,30 @@ const LoginPage = () => {
     setLoading(true);
     setError("");
 
-    // Simulasi delay network
-    await new Promise((r) => setTimeout(r, 700));
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: identifier.trim(), password }),
+      });
+      const result = await res.json();
 
-    // TODO MongoDB: POST /api/auth/login
-    const user = DUMMY_USERS.find(
-      (u) =>
-        (u.username === identifier.trim() || u.email === identifier.trim()) &&
-        u.password === password
-    );
+      if (!result.success) {
+        setError(result.message || "Username/email atau password salah");
+        setLoading(false);
+        return;
+      }
 
-    if (!user) {
-      setError("Username/email atau password salah");
+      // Simpan session ke localStorage
+      localStorage.setItem("user_session", JSON.stringify(result.data));
+
+      // Redirect ke dashboard admin
+      router.push("/admin/dashboard");
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Terjadi kesalahan. Silakan coba lagi.");
       setLoading(false);
-      return;
     }
-
-    // Simpan session ke localStorage (TODO: ganti dengan JWT/cookie)
-    localStorage.setItem("user_session", JSON.stringify({
-      id: user.id,
-      name: user.name,
-      role: user.role,
-      roleLabel: user.roleLabel,
-      division: user.division || null,
-    }));
-
-    // Redirect ke dashboard admin
-    router.push("/admin/dashboard");
   };
 
   return (
@@ -255,29 +200,7 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Dummy credentials hint */}
-      <div style={{
-        marginTop: 20, padding: "14px 20px",
-        background: "rgba(255,255,255,0.08)",
-        border: "1px solid rgba(255,255,255,0.15)",
-        borderRadius: 12, maxWidth: 420, width: "100%",
-        position: "relative", zIndex: 1,
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.5)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
-          Demo Credentials
-        </div>
-        {[
-          ["Admin General", "admin.general", "admin123"],
-          ["Admin IT",      "admin.it",      "it123"],
-          ["Admin Humas",   "admin.humas",   "humas123"],
-        ].map(([role, user, pass]) => (
-          <div key={role} style={{ display: "flex", gap: 8, marginBottom: 4, fontSize: 12, color: "rgba(255,255,255,0.6)", alignItems: "center" }}>
-            <span style={{ minWidth: 100, fontWeight: 600 }}>{role}</span>
-            <span style={{ fontFamily: "monospace", background: "rgba(255,255,255,0.08)", padding: "1px 7px", borderRadius: 4 }}>{user}</span>
-            <span style={{ fontFamily: "monospace", background: "rgba(255,255,255,0.08)", padding: "1px 7px", borderRadius: 4 }}>{pass}</span>
-          </div>
-        ))}
-      </div>
+
 
       <div style={{ marginTop: 16, fontSize: 11, color: "rgba(255,255,255,0.35)", zIndex: 1 }}>
         © 2026 BPT Komdigi · Kementerian Komunikasi dan Digital RI
