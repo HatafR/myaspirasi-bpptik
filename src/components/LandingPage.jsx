@@ -324,7 +324,7 @@ const LandingPage = () => {
                 {[
                   ["Nomor Tiket", submitted.id],
                   ["Subjek", submitted.subject || "-"],
-                  ["Divisi", `${div?.icon} ${div?.label}`],
+                  ["Layanan", `${div?.icon} ${div?.name}`],
                   ["Tanggal", formatDate(submitted.createdAt)],
                   ["Email", submitted.email],
                 ].map(([label, val], i) => (

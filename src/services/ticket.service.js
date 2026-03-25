@@ -5,9 +5,7 @@ import { analyzeTextAI } from "@/lib/ai-analyze";
 
 export async function createTicket(data) {
   const service = await prisma.service.findUnique({
-    where: {
-      id: data.serviceId,
-    },
+    where: { id: data.serviceId },
   });
 
   if (!service) {
@@ -24,35 +22,45 @@ export async function createTicket(data) {
 
   const ticketNumber = await generateTicketNumber();
 
-  const ticket = await prisma.$transaction(async (tx) => {
-    const createdTicket = await tx.ticket.create({
-      data: {
-        ticketNumber,
-        name: data.name,
-        email: data.email,
-        message: data.message,
-        serviceId: data.serviceId,
-        assignedToId,
-        status,
-        sentiment: ai.sentimen.toUpperCase(),
-        category: ai.kategori.toUpperCase(),
-        aiSource: ai.source,
-      },
-      include: {
-        service: true,
-      },
-    });
-
-    await tx.ticketStatusHistory.create({
-      data: {
-        ticketId: createdTicket.id,
-        status,
-      },
-    });
-
-    return createdTicket;
+  // ======================
+  // CREATE TICKET (CRITICAL)
+  // ======================
+  const ticket = await prisma.ticket.create({
+    data: {
+      ticketNumber,
+      name: data.name,
+      subject: data.subject,
+      email: data.email,
+      message: data.message,
+      serviceId: data.serviceId,
+      assignedToId,
+      status,
+      sentiment: ai.sentimen.toUpperCase(),
+      category: ai.kategori.toUpperCase(),
+      aiSource: ai.source,
+    },
+    include: {
+      service: true,
+    },
   });
 
+  // ======================
+  // HISTORY (NON-CRITICAL)
+  // ======================
+  try {
+    await prisma.ticketStatusHistory.create({
+      data: {
+        ticketId: ticket.id,
+        status,
+      },
+    });
+  } catch (err) {
+    console.error("History failed:", err.message);
+  }
+
+  // ======================
+  // EMAIL + LOG
+  // ======================
   try {
     await sendTicketCreatedEmail(ticket.email, ticket);
 

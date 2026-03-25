@@ -14,8 +14,9 @@ const prisma = new PrismaClient({
   adapter,
 });
 
-const hashedPasswordSuper = await bcrypt.hash("super-admin-123", 10);
-const hashedPasswordIt = await bcrypt.hash("it-admin-123", 10);
+const hashedPasswordSuper = await bcrypt.hash("super123", 10);
+const hashedPasswordIt = await bcrypt.hash("it123", 10);
+const hashedPasswordGeneral = await bcrypt.hash("admin123", 10);
 
 const SERVICES = [
   {
@@ -119,6 +120,24 @@ async function main() {
       email: "it@ticketing.local",
       password: hashedPasswordIt,
       role: UserRole.SERVICE_ADMIN,
+    },
+  });
+
+  const generalAdmin = await prisma.user.upsert({
+    where: {
+      email: "admin.general@ticketing.local",
+    },
+    update: {
+      password: hashedPasswordGeneral,
+      username: "admin.general",
+      role: UserRole.GENERAL_ADMIN,
+    },
+    create: {
+      name: "Admin General",
+      username: "admin.general",
+      email: "admin.general@ticketing.local",
+      password: hashedPasswordGeneral,
+      role: UserRole.GENERAL_ADMIN,
     },
   });
 

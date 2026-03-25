@@ -56,10 +56,6 @@ export async function GET(req, { params }) {
     );
   }
 }
-
-// ==========================
-// PATCH /api/tickets/:id
-// ==========================
 export async function PATCH(req, { params }) {
   try {
     const user = requireAuth(req);
@@ -68,82 +64,81 @@ export async function PATCH(req, { params }) {
     const { id } = params;
     const body = await req.json();
 
-    const result = await prisma.$transaction(async (tx) => {
-      const ticket = await tx.ticket.findUnique({
-        where: { id },
+    const ticket = await prisma.ticket.findUnique({
+      where: { id },
+    });
+
+    if (!ticket) throw new Error("Ticket not found");
+
+    // ======================
+    // ASSIGN ADMIN
+    // ======================
+    if (body.assignedToId) {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: body.assignedToId },
       });
 
-      if (!ticket) {
-        throw new Error("Ticket not found");
+      if (!targetUser) {
+        throw new Error("Assigned user not found");
       }
 
-      // ======================
-      // ASSIGN ADMIN
-      // ======================
-      if (body.assignedToId) {
-        const targetUser = await tx.user.findUnique({
-          where: { id: body.assignedToId },
-        });
-
-        if (!targetUser) {
-          throw new Error("Assigned user not found");
-        }
-
-        const updated = await tx.ticket.update({
-          where: { id },
-          data: {
-            assignedToId: body.assignedToId,
-            status: "ASSIGNED",
-          },
-        });
-
-        await tx.ticketStatusHistory.create({
-          data: {
-            ticketId: ticket.id,
-            status: "ASSIGNED",
-            changedById: user.userId,
-          },
-        });
-
-        return updated;
-      }
-
-      // ======================
-      // UPDATE STATUS
-      // ======================
-      if (!body.status) {
-        throw new Error("No update payload");
-      }
-
-      if (!validateStatusTransition(ticket.status, body.status)) {
-        throw new Error("Invalid status transition");
-      }
-
-      const updated = await tx.ticket.update({
+      const updated = await prisma.ticket.update({
         where: { id },
         data: {
-          status: body.status,
-          closedAt:
-            body.status === "CLOSED"
-              ? ticket.closedAt || new Date()
-              : ticket.closedAt,
+          assignedToId: body.assignedToId,
+          status: "ASSIGNED",
         },
       });
 
-      await tx.ticketStatusHistory.create({
+      // log history (non-critical)
+      await prisma.ticketStatusHistory.create({
         data: {
           ticketId: ticket.id,
-          status: body.status,
+          status: "ASSIGNED",
           changedById: user.userId,
         },
       });
 
-      return updated;
+      return Response.json({
+        success: true,
+        data: updated,
+      });
+    }
+
+    // ======================
+    // UPDATE STATUS
+    // ======================
+    if (!body.status) {
+      throw new Error("No update payload");
+    }
+
+    if (!validateStatusTransition(ticket.status, body.status)) {
+      throw new Error("Invalid status transition");
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id },
+      data: {
+        status: body.status,
+        closedAt:
+          body.status === "CLOSED"
+            ? ticket.closedAt || new Date()
+            : ticket.closedAt,
+      },
+    });
+
+    // history = secondary
+    await prisma.ticketStatusHistory.create({
+      data: {
+        ticketId: ticket.id,
+        status: body.status,
+        changedById: user.userId,
+      },
     });
 
     return Response.json({
       success: true,
-      data: result,
+      data: updated,
     });
   } catch (err) {
     return Response.json(
