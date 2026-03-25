@@ -20,7 +20,7 @@ export async function createTicket(data) {
     ? null
     : service.assignedAdminId;
 
-  const status = service.requiresManualAssignment ? "submitted" : "assigned";
+  const status = service.requiresManualAssignment ? "SUBMITTED" : "ASSIGNED";
 
   const ticketNumber = await generateTicketNumber();
 
@@ -34,8 +34,8 @@ export async function createTicket(data) {
         serviceId: data.serviceId,
         assignedToId,
         status,
-        sentiment: ai.sentimen,
-        category: ai.kategori.toLowerCase(),
+        sentiment: ai.sentimen.toUpperCase(),
+        category: ai.kategori.toUpperCase(),
         aiSource: ai.source,
       },
       include: {
@@ -60,7 +60,7 @@ export async function createTicket(data) {
       data: {
         ticketId: ticket.id,
         email: ticket.email,
-        type: "submitted",
+        type: "SUBMITTED",
         subject: "Tiket Anda berhasil dibuat",
         status: "sent",
         sentAt: new Date(),
@@ -71,7 +71,7 @@ export async function createTicket(data) {
       data: {
         ticketId: ticket.id,
         email: ticket.email,
-        type: "submitted",
+        type: "SUBMITTED",
         subject: "Tiket Anda berhasil dibuat",
         status: "failed",
         errorMessage: error.message,

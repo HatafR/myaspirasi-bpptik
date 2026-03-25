@@ -46,7 +46,7 @@ const StatusBadge = ({ status }) => {
 const LandingPage = () => {
   const router = useRouter();
   const [service, setService] = useState("");
-  const [services, setServices] = useState("");
+  const [services, setServices] = useState([]);
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -83,7 +83,7 @@ const LandingPage = () => {
   const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
   const handleSubmit = async () => {
-    if (!sservice || !messagse.trim()) return;
+    if (!service || !message.trim()) return;
 
     if (!subject.trim()) {
       setSubjectError("Subjek wajib diisi");
