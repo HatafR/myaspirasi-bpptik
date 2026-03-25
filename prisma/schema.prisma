@@ -43,6 +43,7 @@ model Ticket {
   name       String
   email      String
   division   String
+  subject    String
   message    String       @db.Text
   status     TicketStatus @default(Open)
   sentiment  Sentiment

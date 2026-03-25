@@ -44,7 +44,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { id, name, email, division, message, sentiment, category } = body;
+    const { id, name, email, division, subject, message, sentiment, category } = body;
 
     // Validasi
     if (!id || !email || !division || !message || !sentiment || !category) {
@@ -69,6 +69,7 @@ export async function POST(request) {
         name:      name?.trim() || "Anonim",
         email:     email.trim(),
         division,
+        subject:   subject?.trim() || "",
         message:   message.trim(),
         sentiment,
         category,
