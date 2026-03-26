@@ -42,19 +42,14 @@ export async function analyzeTextAI(text) {
 
   try {
     const prompt = `
-Analisis teks berikut.
+Return ONLY JSON:
+{"sentimen":"Positif|Netral|Negatif","kategori":"Kritik|Saran|Komentar"}
 
-Output JSON:
-{
-  "sentimen":"Positif|Netral|Negatif",
-  "kategori":"Kritik|Saran|Komentar"
-}
-
-Teks: "${text}"
-    `;
+Text: "${text}"
+`;
 
     const res = await fetch(
-      "https://mlapi.run/75b601aa-4392-442e-b232-b9f7a13c545b",
+      "https://mlapi.run/75b601aa-4392-442e-b232-b9f7a13c545b/v1/chat/completions",
       {
         method: "POST",
         headers: {
@@ -62,6 +57,7 @@ Teks: "${text}"
           Authorization: `Bearer ${API_KEY}`,
         },
         body: JSON.stringify({
+          model: "anthropic/claude-haiku-4-5",
           messages: [
             {
               role: "user",
@@ -72,9 +68,11 @@ Teks: "${text}"
       },
     );
 
-    const data = await res.json();
+    const raw = await res.text();
 
-    const parsed = extractJSON(data.content || "");
+    const data = JSON.parse(raw);
+
+    const parsed = extractJSON(data.choices[0].message.content || "");
 
     if (!parsed) return ruleBased(text);
 
@@ -90,6 +88,7 @@ Teks: "${text}"
       source: "haiku-4.5",
     };
   } catch {
+    console.log("error");
     return ruleBased(text);
   }
 }

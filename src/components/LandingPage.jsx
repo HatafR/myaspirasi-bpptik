@@ -8,6 +8,7 @@ import formatDate from "@/utils/formatDate";
 import SentimentBadge from "@/components/SentimentBadge";
 import CategoryBadge from "@/components/CategoryBadge";
 import Navbar from "@/components/Navbar";
+import { analyzeTextAI } from "@/lib/ai-analyze";
 
 const STATUS_MAP = {
   Open: { bg: "#EFF6FF", color: "#1A3A8F", border: "#C8D8EE", icon: "🔵" },
@@ -102,8 +103,6 @@ const LandingPage = () => {
 
     setSubmitting(true);
 
-    const { sentimen, kategori } = await analyzeText(message);
-
     try {
       const res = await fetch("/api/tickets", {
         method: "POST",
@@ -116,10 +115,10 @@ const LandingPage = () => {
           serviceId: service, // 🔥 ini kunci (bukan division lagi)
           subject: subject.trim(),
           message: message.trim(),
-          sentiment: sentimen,
-          category: kategori,
         }),
       });
+
+      console.log(res);
 
       const result = await res.json();
 
