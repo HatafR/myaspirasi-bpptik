@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { AppError } from "@/lib/error";
 
 export async function loginAdmin(identifier, password) {
+  if (!identifier || !password) {
+    throw new AppError("Field wajib diisi", "VALIDATION_ERROR", 400);
+  }
   const user = await prisma.user.findFirst({
     where: {
       OR: [{ email: identifier }, { username: identifier }],
@@ -10,7 +14,7 @@ export async function loginAdmin(identifier, password) {
   });
 
   if (!user) {
-    throw new Error("User not found");
+    throw new AppError("User tidak ditemukan", "AUTH_NOT_FOUND", 404);
   }
 
   if (!user.isActive) {
@@ -20,11 +24,11 @@ export async function loginAdmin(identifier, password) {
   const isValid = await bcrypt.compare(password, user.password);
 
   if (!isValid) {
-    throw new Error("Invalid password");
+    throw new AppError("Password salah", "AUTH_INVALID", 401);
   }
 
   if (!process.env.JWT_SECRET) {
-    throw new Error("JWT secret not configured");
+    throw new AppError("JWT secret not configured", "AUTH_INVALID", 401);
   }
 
   const token = jwt.sign(

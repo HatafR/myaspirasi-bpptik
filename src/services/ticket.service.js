@@ -50,11 +50,26 @@ export async function createTicket(data) {
   // HISTORY (NON-CRITICAL)
   // ======================
   try {
-    await prisma.ticketStatusHistory.create({
-      data: {
+    const historyData = [];
+
+    // event 1: submitted
+    historyData.push({
+      ticketId: ticket.id,
+      status: "SUBMITTED",
+      changedById: "system",
+    });
+
+    // event 2: assigned (kalau auto)
+    if (!service.requiresManualAssignment) {
+      historyData.push({
         ticketId: ticket.id,
-        status,
-      },
+        status: "ASSIGNED",
+        changedById: "system",
+      });
+    }
+
+    await prisma.ticketStatusHistory.createMany({
+      data: historyData,
     });
   } catch (err) {
     console.error("History failed:", err.message);

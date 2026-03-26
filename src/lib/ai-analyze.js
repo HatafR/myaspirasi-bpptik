@@ -37,7 +37,6 @@ const extractJSON = (raw) => {
 
 export async function analyzeTextAI(text) {
   const API_KEY = process.env.MLAPI_KEY;
-
   if (!API_KEY) return ruleBased(text);
 
   try {
@@ -59,6 +58,10 @@ Text: "${text}"
         body: JSON.stringify({
           model: "anthropic/claude-haiku-4-5",
           messages: [
+            {
+              role: "system",
+              content: "Kamu adalah AI analis sentimen.",
+            },
             {
               role: "user",
               content: prompt,
@@ -87,8 +90,7 @@ Text: "${text}"
 
       source: "haiku-4.5",
     };
-  } catch {
-    console.log("error");
+  } catch (err) {
     return ruleBased(text);
   }
 }

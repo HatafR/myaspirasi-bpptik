@@ -9,6 +9,7 @@ import SentimentBadge from "@/components/SentimentBadge";
 import CategoryBadge from "@/components/CategoryBadge";
 import Navbar from "@/components/Navbar";
 import { analyzeTextAI } from "@/lib/ai-analyze";
+import {Turnstile} from "@marsidev/react-turnstile";
 
 const STATUS_MAP = {
   Open: { bg: "#EFF6FF", color: "#1A3A8F", border: "#C8D8EE", icon: "🔵" },
@@ -59,6 +60,7 @@ const LandingPage = () => {
   const [subject, setSubject] = useState("");
   const [subjectError, setSubjectError] = useState("");
   const [attachment, setAttachment] = useState(null);
+  const [captchaToken, setCaptchaToken] = useState(null);
   const [attachError, setAttachError] = useState("");
 
   useEffect(() => {
@@ -83,23 +85,29 @@ const LandingPage = () => {
 
   const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-  const handleSubmit = async () => {
-    if (!service || !message.trim()) return;
 
-    if (!subject.trim()) {
-      setSubjectError("Subjek wajib diisi");
-      return;
-    }
+   const handleSubmit = async () => {
+  if (!captchaToken) {
+    alert("Silakan verifikasi captcha terlebih dahulu");
+    return;
+  }
 
-    if (!email.trim()) {
-      setEmailError("Email wajib diisi");
-      return;
-    }
+  if (!service || !message.trim()) return;
 
-    if (!validateEmail(email)) {
-      setEmailError("Format email tidak valid");
-      return;
-    }
+  if (!subject.trim()) {
+    setSubjectError("Subjek wajib diisi");
+    return;
+  }
+
+  if (!email.trim()) {
+    setEmailError("Email wajib diisi");
+    return;
+  }
+
+  if (!validateEmail(email)) {
+    setEmailError("Format email tidak valid");
+    return;
+  }
 
     setSubmitting(true);
 
@@ -120,21 +128,20 @@ const LandingPage = () => {
 
       console.log(res);
 
-      const result = await res.json();
+    const result = await res.json();
 
-      if (!res.ok) {
-        throw new Error(result.message || "Gagal submit");
-      }
-
-      setSubmitted(result.data);
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
-    } finally {
-      setSubmitting(false);
+    if (!res.ok) {
+      throw new Error(result.message || "Gagal submit");
     }
-  };
 
+    setSubmitted(result.data);
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  } finally {
+    setSubmitting(false);
+  }
+};
   // BG pattern
   const bgStyle = {
     minHeight: "100vh",
@@ -321,7 +328,7 @@ const LandingPage = () => {
                 }}
               >
                 {[
-                  ["Nomor Tiket", submitted.id],
+                  ["Nomor Tiket", submitted.ticketNumber],
                   ["Subjek", submitted.subject || "-"],
                   ["Layanan", `${div?.icon} ${div?.name}`],
                   ["Tanggal", formatDate(submitted.createdAt)],
@@ -918,6 +925,14 @@ const LandingPage = () => {
                 ⚠ {attachError}
               </span>
             )}
+          </div>
+
+        {/* CAPTCHA */}
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Turnstile
+             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+             onSuccess={(token) => setCaptchaToken(token)}
+             />
           </div>
 
           {/* Submit */}

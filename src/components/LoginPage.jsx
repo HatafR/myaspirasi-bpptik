@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
+
+
 
 const LoginPage = () => {
   const router = useRouter();
@@ -10,47 +13,67 @@ const LoginPage = () => {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [caprchaToken, setCaptchaToken] = useState("");
 
   const handleLogin = async () => {
-    if (!identifier.trim() || !password.trim()) {
-      setError("Username/email dan password wajib diisi");
-      return;
+  if (!identifier.trim() || !password.trim()) {
+    setError("Username/email dan password wajib diisi");
+    return;
+  }
+
+  // validasi captcha
+  if (!captchaToken) {
+    setError("Silakan verifikasi captcha terlebih dahulu");
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        identifier: identifier.trim(),
+        password,
+        captchaToken, 
+      }),
+    });
+
+    const result = await res.json();
+
+    if (!result.success) {
+      throw new Error(result.message);
     }
 
-    setLoading(true);
-    setError("");
+    localStorage.setItem("token", result.data.token);
+    localStorage.setItem("user_session", JSON.stringify(result.data.user));
 
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          identifier: identifier.trim(),
-          password,
-        }),
-      });
+    router.push("/admin/dashboard");
 
-      const result = await res.json();
+  } catch (err) {
+    setError(err.message || "Login gagal");
+  } finally {
+    setLoading(false);
+  }
+};
 
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-
-      localStorage.setItem("token", result.data.token);
-
-      localStorage.setItem("user_session", JSON.stringify(result.data.user));
-
-      router.push("/admin/dashboard");
-    } catch (err) {
-      setError(err.message || "Login gagal");
-    } finally {
-      setLoading(false);
-    }
+  if (typeof window !== "undefined") {
+  window.onTurnstileSuccess = function (token) {
+    setCaptchaToken(token);
   };
+}
 
   return (
+    <>
+      <Script
+    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+    strategy="afterInteractive"
+  />
+    
     <div
       style={{
         minHeight: "100vh",
@@ -303,6 +326,15 @@ const LoginPage = () => {
             </div>
           </div>
 
+          {/* Cloudflare Turnstile */}
+          <div style={{ marginBottom: 18 }}>
+          <div
+            className="cf-turnstile"
+            data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+            data-callback="onTurnstileSuccess"
+          ></div>
+          </div>
+
           {/* Submit */}
           <button
             onClick={handleLogin}
@@ -426,6 +458,7 @@ const LoginPage = () => {
         © 2026 BPT Komdigi · Kementerian Komunikasi dan Digital RI
       </div>
     </div>
+    </>
   );
 };
 

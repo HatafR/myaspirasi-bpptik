@@ -1,35 +1,76 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import formatDate from "@/utils/formatDate";
 import SentimentBadge from "@/components/SentimentBadge";
 import CategoryBadge from "@/components/CategoryBadge";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const STATUS_LIST = ["Open", "On Progress", "Resolved", "Closed"];
+const STATUS_LIST = [
+  "Submitted",
+  "Assigned",
+  "In Progress",
+  "Returned",
+  "Resolved",
+  "Closed",
+];
 const STATUS_MAP = {
-  Open: { bg: "#EFF6FF", color: "#1A3A8F", border: "#C8D8EE", icon: "🔵" },
-  "On Progress": {
+  Submitted: {
+    bg: "#EFF6FF",
+    color: "#1A3A8F",
+    border: "#C8D8EE",
+    icon: "📩",
+  },
+  Assigned: {
+    bg: "#E0F2FE",
+    color: "#0369A1",
+    border: "#BAE6FD",
+    icon: "👤",
+  },
+  "In Progress": {
     bg: "#FFFBEB",
     color: "#92400E",
     border: "#FDE68A",
     icon: "🟡",
   },
-  Resolved: { bg: "#DCFCE7", color: "#15803D", border: "#BBF7D0", icon: "🟢" },
-  Closed: { bg: "#F1F5F9", color: "#475569", border: "#CBD5E1", icon: "⚫" },
+  Returned: {
+    bg: "#FEF2F2",
+    color: "#C0272D",
+    border: "#FECACA",
+    icon: "↩️",
+  },
+  Resolved: {
+    bg: "#DCFCE7",
+    color: "#15803D",
+    border: "#BBF7D0",
+    icon: "🟢",
+  },
+  Closed: {
+    bg: "#F1F5F9",
+    color: "#475569",
+    border: "#CBD5E1",
+    icon: "⚫",
+  },
 };
 
 const STATUS_TO_API = {
-  Open: "assigned",
-  "On Progress": "in_progress",
-  Resolved: "resolved",
-  Closed: "closed",
+  Submitted: "SUBMITTED",
+  Assigned: "ASSIGNED",
+  "In Progress": "IN_PROGRESS",
+  Returned: "RETURNED",
+  Resolved: "RESOLVED",
+  Closed: "CLOSED",
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
-  const s = STATUS_MAP[status] || STATUS_MAP["Open"];
+  const s = STATUS_MAP[status] || {
+    bg: "#F1F5F9",
+    color: "#475569",
+    border: "#CBD5E1",
+    icon: "❓",
+  };
   return (
     <span
       style={{
@@ -96,6 +137,25 @@ const StatCard = ({
   </div>
 );
 
+const mapToUIStatus = (status) => {
+  switch (status) {
+    case "SUBMITTED":
+      return "Submitted";
+    case "ASSIGNED":
+      return "Assigned";
+    case "IN_PROGRESS":
+      return "In Progress";
+    case "RETURNED":
+      return "Returned";
+    case "RESOLVED":
+      return "Resolved";
+    case "CLOSED":
+      return "Closed";
+    default:
+      return "Submitted";
+  }
+};
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 const AdminDashboard = () => {
   const router = useRouter();
@@ -110,6 +170,9 @@ const AdminDashboard = () => {
   const [reply, setReply] = useState("");
   const [sidebarOpen, setSidebar] = useState(false);
   const [toast, setToast] = useState(null);
+  const [adminSearch, setAdminSearch] = useState("");
+  const [showAdminDropdown, setShowAdminDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -150,18 +213,7 @@ const AdminDashboard = () => {
           ticketNumber: t.ticketNumber,
           assignedToId: t.assignedToId || t.assignedTo?.id || null,
           assignedToName: t.assignedTo?.name || null,
-          status:
-            t.status === "submitted"
-              ? "Open"
-              : t.status === "assigned"
-                ? "Open"
-                : t.status === "in_progress"
-                  ? "On Progress"
-                  : t.status === "resolved"
-                    ? "Resolved"
-                    : t.status === "closed"
-                      ? "Closed"
-                      : "Open",
+          status: mapToUIStatus(t.status),
           category: t.category
             ? t.category.charAt(0).toUpperCase() + t.category.slice(1)
             : "Komentar",
@@ -170,7 +222,7 @@ const AdminDashboard = () => {
 
         setTickets(normalized);
 
-        if (u.role === "general_admin" || u.role === "super_admin") {
+        if (u.role === "GENERAL_ADMIN" || u.role === "SUPER_ADMIN") {
           const adminRes = await fetch("/api/admins", {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -201,6 +253,17 @@ const AdminDashboard = () => {
     }
   }, [selectedTicket]);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowAdminDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const getAssignableAdmins = (ticket) => {
     if (ticket.service?.name === "Lainnya") {
       return admins;
@@ -229,7 +292,7 @@ const AdminDashboard = () => {
     );
 
   const isGeneral =
-    user.role === "general_admin" || user.role === "super_admin";
+    user.role === "GENERAL_ADMIN" || user.role === "SUPER_ADMIN";
   const myTickets = tickets;
   const filtered = myTickets.filter((t) => {
     const matchStatus = filterStatus === "all" || t.status === filterStatus;
@@ -244,12 +307,21 @@ const AdminDashboard = () => {
   const count = (fn) => myTickets.filter(fn).length;
   const stats = {
     total: myTickets.length,
-    open: count((t) => t.status === "Open"),
-    onProgress: count((t) => t.status === "On Progress"),
+    submitted: count((t) => t.status === "Submitted"),
+    assigned: count((t) => t.status === "Assigned"),
+    inProgress: count((t) => t.status === "In Progress"),
+    returned: count((t) => t.status === "Returned"),
     resolved: count((t) => t.status === "Resolved"),
-    positif: count((t) => t.sentiment === "Positif"),
-    negatif: count((t) => t.sentiment === "Negatif"),
-    netral: count((t) => t.sentiment === "Netral"),
+    closed: count((t) => t.status === "Closed"),
+  };
+
+  const summaryStats = {
+    open: count((t) => t.status === "Submitted" || t.status === "Assigned"),
+    onProgress: count(
+      (t) => t.status === "In Progress" || t.status === "Returned",
+    ),
+    resolved: count((t) => t.status === "Resolved"),
+    closed: count((t) => t.status === "Closed"),
   };
 
   // ── Actions
@@ -641,21 +713,21 @@ const AdminDashboard = () => {
                   />
                   <StatCard
                     icon="🔵"
-                    value={stats.open}
+                    value={summaryStats.open}
                     label="Open"
                     color="#1A3A8F"
                     bg="#EFF6FF"
                   />
                   <StatCard
                     icon="🟡"
-                    value={stats.onProgress}
+                    value={summaryStats.onProgress}
                     label="On Progress"
                     color="#92400E"
                     bg="#FFFBEB"
                   />
                   <StatCard
                     icon="🟢"
-                    value={stats.resolved}
+                    value={summaryStats.resolved}
                     label="Resolved"
                     color="#15803D"
                     bg="#DCFCE7"
@@ -827,6 +899,12 @@ const AdminDashboard = () => {
                   const t =
                     tickets.find((x) => x.id === selectedTicket.id) ||
                     selectedTicket;
+                  const assignableAdmins = getAssignableAdmins(t);
+
+                  const filteredAdmins = assignableAdmins.filter((a) =>
+                    a.name.toLowerCase().includes(adminSearch.toLowerCase()),
+                  );
+
                   const assignedAdmin = admins.find(
                     (a) => a.id === t.assignedToId,
                   );
@@ -1088,18 +1166,8 @@ const AdminDashboard = () => {
                                 }}
                               >
                                 {history.map((h, i) => {
-                                  const sm =
-                                    STATUS_MAP[
-                                      h.status === "assigned"
-                                        ? "Open"
-                                        : h.status === "in_progress"
-                                          ? "On Progress"
-                                          : h.status === "resolved"
-                                            ? "Resolved"
-                                            : h.status === "closed"
-                                              ? "Closed"
-                                              : "Open"
-                                    ];
+                                  const mappedStatus = mapToUIStatus(h.status);
+                                  const sm = STATUS_MAP[mappedStatus];
 
                                   return (
                                     <div
@@ -1116,7 +1184,7 @@ const AdminDashboard = () => {
                                       }}
                                     >
                                       <span style={{ fontSize: 14 }}>
-                                        {sm.icon}
+                                        {sm?.icon || "❓"}
                                       </span>
 
                                       <div style={{ flex: 1 }}>
@@ -1168,47 +1236,116 @@ const AdminDashboard = () => {
                             >
                               Serahkan ke Admin Layanan
                             </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: 8,
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              {!t.assignedToId &&
-                                getAssignableAdmins(t).map((a) => {
-                                  const active = t.assignedToId === a.id;
-                                  return (
-                                    <button
-                                      key={a.id}
-                                      onClick={() => assignTicket(t.id, a.id)}
+
+                            {!t.assignedToId ? (
+                              <div
+                                ref={dropdownRef}
+                                style={{ position: "relative", width: 260 }}
+                              >
+                                {/* Trigger */}
+                                <button
+                                  onClick={() =>
+                                    setShowAdminDropdown((v) => !v)
+                                  }
+                                  style={{
+                                    width: "100%",
+                                    padding: "8px 12px",
+                                    borderRadius: 8,
+                                    border: "1.5px solid #C8D8EE",
+                                    background: "#fff",
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    textAlign: "left",
+                                  }}
+                                >
+                                  👤 Pilih Admin
+                                </button>
+
+                                {/* Dropdown */}
+                                {showAdminDropdown && (
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      top: "110%",
+                                      left: 0,
+                                      width: "100%",
+                                      background: "#fff",
+                                      border: "1px solid #C8D8EE",
+                                      borderRadius: 10,
+                                      boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+                                      zIndex: 20,
+                                      padding: 10,
+                                    }}
+                                  >
+                                    {/* Search */}
+                                    <input
+                                      placeholder="Cari admin..."
+                                      value={adminSearch}
+                                      onChange={(e) =>
+                                        setAdminSearch(e.target.value)
+                                      }
                                       style={{
-                                        padding: "7px 14px",
-                                        borderRadius: 8,
-                                        cursor: "pointer",
-                                        fontFamily: "inherit",
+                                        width: "100%",
+                                        padding: "6px 8px",
+                                        marginBottom: 8,
+                                        borderRadius: 6,
+                                        border: "1px solid #C8D8EE",
                                         fontSize: 12,
-                                        fontWeight: 700,
-                                        border: active
-                                          ? "2px solid #1A3A8F"
-                                          : "1.5px solid #C8D8EE",
-                                        background: active ? "#E8EEF8" : "#fff",
-                                        color: active ? "#1A3A8F" : "#5A6E8C",
-                                        transition: "all 0.15s",
+                                      }}
+                                    />
+
+                                    {/* List */}
+                                    <div
+                                      style={{
+                                        maxHeight: 160,
+                                        overflowY: "auto",
                                       }}
                                     >
-                                      👤 {a.name} {active && "✓"}
-                                    </button>
-                                  );
-                                })}
-                              {getAssignableAdmins(t).length === 0 && (
-                                <span
-                                  style={{ fontSize: 12, color: "#94A3B8" }}
-                                >
-                                  Tidak ada admin untuk divisi ini
-                                </span>
-                              )}
-                            </div>
+                                      {filteredAdmins.map((a) => (
+                                        <div
+                                          key={a.id}
+                                          onClick={() => {
+                                            assignTicket(t.id, a.id);
+                                            setShowAdminDropdown(false);
+                                            setAdminSearch("");
+                                          }}
+                                          style={{
+                                            padding: "6px 8px",
+                                            borderRadius: 6,
+                                            cursor: "pointer",
+                                            fontSize: 12,
+                                          }}
+                                          onMouseEnter={(e) =>
+                                            (e.currentTarget.style.background =
+                                              "#F0F5FB")
+                                          }
+                                          onMouseLeave={(e) =>
+                                            (e.currentTarget.style.background =
+                                              "transparent")
+                                          }
+                                        >
+                                          👤 {a.name}
+                                        </div>
+                                      ))}
+
+                                      {filteredAdmins.length === 0 && (
+                                        <div
+                                          style={{
+                                            fontSize: 12,
+                                            color: "#94A3B8",
+                                          }}
+                                        >
+                                          Tidak ditemukan
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : null}
+
+                            {/* Assigned info */}
                             {assignedAdmin && (
                               <div
                                 style={{
@@ -1220,6 +1357,13 @@ const AdminDashboard = () => {
                               >
                                 ✅ Diserahkan ke: {assignedAdmin.name}
                               </div>
+                            )}
+
+                            {/* Empty state */}
+                            {assignableAdmins.length === 0 && (
+                              <span style={{ fontSize: 12, color: "#94A3B8" }}>
+                                Tidak ada admin untuk divisi ini
+                              </span>
                             )}
                           </div>
                         )}
@@ -1677,7 +1821,7 @@ const AdminDashboard = () => {
                 </button>
               </div>
               {admins
-                .filter((a) => a.role === "service_admin")
+                .filter((a) => a.role === "SERVICE_ADMIN")
                 .map((a) => {
                   const ticketCount = tickets.filter(
                     (t) => t.assignedToId === a.id,

@@ -59,9 +59,8 @@ export async function GET(req, { params }) {
 export async function PATCH(req, { params }) {
   try {
     const user = requireAuth(req);
-    requireRole(user, ["SERVICE_ADMIN", "SUPER_ADMIN"]);
 
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
 
     const ticket = await prisma.ticket.findUnique({

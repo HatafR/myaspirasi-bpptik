@@ -4,11 +4,11 @@ import { requireAuth, requireRole } from "@/lib/auth";
 export async function GET(req) {
   try {
     const user = requireAuth(req);
-    requireRole(user, ["super_admin", "general_admin"]);
+    requireRole(user, ["SUPER_ADMIN", "GENERAL_ADMIN"]);
 
     const admins = await prisma.user.findMany({
       where: {
-        role: "service_admin",
+        role: "SERVICE_ADMIN",
         isActive: true,
       },
       select: {

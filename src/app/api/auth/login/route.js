@@ -1,5 +1,5 @@
 import { loginAdmin } from "@/services/auth.service";
-import { success } from "zod";
+import { AppError } from "@/lib/error";
 
 export async function POST(req) {
   try {
@@ -12,14 +12,25 @@ export async function POST(req) {
       data: result,
     });
   } catch (e) {
+    if (e instanceof AppError) {
+      return Response.json(
+        {
+          success: false,
+          message: e.message,
+          code: e.code,
+        },
+        { status: e.status },
+      );
+    }
+
+    // unknown error (JANGAN expose)
     return Response.json(
       {
         success: false,
-        message: e.message,
+        message: "Internal server error",
+        code: "SERVER_ERROR",
       },
-      {
-        status: 400,
-      },
+      { status: 500 },
     );
   }
 }

@@ -1,10 +1,10 @@
 export const allowedTransitions = {
-  submitted: ["assigned", "cancelled"],
-  assigned: ["in_progress", "returned", "cancelled"],
-  in_progress: ["resolved", "returned"],
-  returned: [],
-  resolved: [],
-  cancelled: [],
+  SUBMITTED: ["ASSIGNED"],
+  ASSIGNED: ["IN_PROGRESS", "RETURNED"],
+  IN_PROGRESS: ["RESOLVED", "RETURNED"],
+  RETURNED: ["ASSIGNED"],
+  RESOLVED: ["CLOSED"],
+  CLOSED: [],
 };
 
 export function validateStatusTransition(currentStatus, nextStatus) {
