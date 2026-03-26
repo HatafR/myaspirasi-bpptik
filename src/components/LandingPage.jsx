@@ -8,6 +8,7 @@ import formatDate from "@/utils/formatDate";
 import SentimentBadge from "@/components/SentimentBadge";
 import CategoryBadge from "@/components/CategoryBadge";
 import Navbar from "@/components/Navbar";
+import {Turnstile} from "@marsidev/react-turnstile";
 
 const STATUS_MAP = {
   Open: { bg: "#EFF6FF", color: "#1A3A8F", border: "#C8D8EE", icon: "🔵" },
@@ -58,6 +59,7 @@ const LandingPage = () => {
   const [subject, setSubject] = useState("");
   const [subjectError, setSubjectError] = useState("");
   const [attachment, setAttachment] = useState(null);
+  const [captchaToken, setCaptchaToken] = useState(null);
   const [attachError, setAttachError] = useState("");
 
   useEffect(() => {
@@ -82,60 +84,66 @@ const LandingPage = () => {
 
   const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-  const handleSubmit = async () => {
-    if (!service || !message.trim()) return;
 
-    if (!subject.trim()) {
-      setSubjectError("Subjek wajib diisi");
-      return;
+   const handleSubmit = async () => {
+  if (!captchaToken) {
+    alert("Silakan verifikasi captcha terlebih dahulu");
+    return;
+  }
+
+  if (!service || !message.trim()) return;
+
+  if (!subject.trim()) {
+    setSubjectError("Subjek wajib diisi");
+    return;
+  }
+
+  if (!email.trim()) {
+    setEmailError("Email wajib diisi");
+    return;
+  }
+
+  if (!validateEmail(email)) {
+    setEmailError("Format email tidak valid");
+    return;
+  }
+
+  setSubmitting(true);
+
+  const { sentimen, kategori } = await analyzeText(message);
+
+  try {
+    const res = await fetch("/api/tickets", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: name.trim() || "Anonim",
+        email: email.trim(),
+        serviceId: service,
+        subject: subject.trim(),
+        message: message.trim(),
+        sentiment: sentimen,
+        category: kategori,
+        captcha: captchaToken,
+      }),
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw new Error(result.message || "Gagal submit");
     }
 
-    if (!email.trim()) {
-      setEmailError("Email wajib diisi");
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setEmailError("Format email tidak valid");
-      return;
-    }
-
-    setSubmitting(true);
-
-    const { sentimen, kategori } = await analyzeText(message);
-
-    try {
-      const res = await fetch("/api/tickets", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: name.trim() || "Anonim",
-          email: email.trim(),
-          serviceId: service, // 🔥 ini kunci (bukan division lagi)
-          subject: subject.trim(),
-          message: message.trim(),
-          sentiment: sentimen,
-          category: kategori,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.message || "Gagal submit");
-      }
-
-      setSubmitted(result.data);
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+    setSubmitted(result.data);
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  } finally {
+    setSubmitting(false);
+  }
+};
   // BG pattern
   const bgStyle = {
     minHeight: "100vh",
@@ -919,6 +927,14 @@ const LandingPage = () => {
                 ⚠ {attachError}
               </span>
             )}
+          </div>
+
+        {/* CAPTCHA */}
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Turnstile
+             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+             onSuccess={(token) => setCaptchaToken(token)}
+             />
           </div>
 
           {/* Submit */}

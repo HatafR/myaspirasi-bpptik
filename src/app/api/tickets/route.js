@@ -2,6 +2,11 @@ import { createTicket } from "@/services/ticket.service";
 import { ticketSchema } from "@/validations/ticket.validation";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { redis } from "@/lib/redis";
+
+const LIMIT = 5;
+const WINDOW = 60; // seconds
 
 // ==========================
 // GET /api/tickets
@@ -17,12 +22,10 @@ export async function GET(req) {
 
     let where = {};
 
-    // 🔐 Role-based access
     if (user.role === "SERVICE_ADMIN") {
       where.assignedToId = user.userId;
     }
 
-    // 🔍 Filters
     if (status && status !== "all") {
       where.status = status;
     }
@@ -75,9 +78,35 @@ export async function GET(req) {
 // ==========================
 export async function POST(req) {
   try {
+    // ambil IP user
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0] ||
+      "anonymous";
+
+    const key = `ratelimit:${ip}`;
+
+    // check rate limit
+    const current = await redis.incr(key);
+
+    if (current === 1) {
+      await redis.expire(key, WINDOW);
+    }
+
+    if (current > LIMIT) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Terlalu banyak kirim aspirasi. Tunggu 60 detik.",
+        },
+        { status: 429 }
+      );
+    }
+
+    // =====================
+    // CREATE TICKET
+    // =====================
     const body = await req.json();
 
-    // ✅ VALIDATION (single source of truth)
     const parsed = ticketSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -90,7 +119,6 @@ export async function POST(req) {
       );
     }
 
-    // ✅ BUSINESS LOGIC DI SERVICE
     const ticket = await createTicket(parsed.data);
 
     return Response.json(

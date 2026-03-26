@@ -37,7 +37,6 @@ const extractJSON = (raw) => {
 
 export async function analyzeTextAI(text) {
   const API_KEY = process.env.MLAPI_KEY;
-
   if (!API_KEY) return ruleBased(text);
 
   try {
@@ -51,10 +50,10 @@ Output JSON:
 }
 
 Teks: "${text}"
-    `;
+`;
 
     const res = await fetch(
-      "https://mlapi.run/75b601aa-4392-442e-b232-b9f7a13c545b",
+      "https://mlapi.run/abc-1234-xyz/v1/chat/completions",
       {
         method: "POST",
         headers: {
@@ -62,7 +61,14 @@ Teks: "${text}"
           Authorization: `Bearer ${API_KEY}`,
         },
         body: JSON.stringify({
+          model: "anthropic/claude-haiku-4-5",
+          temperature: 0.7,
+          max_tokens: 150,
           messages: [
+            {
+              role: "system",
+              content: "Kamu adalah AI analis sentimen.",
+            },
             {
               role: "user",
               content: prompt,
@@ -74,8 +80,12 @@ Teks: "${text}"
 
     const data = await res.json();
 
-    const parsed = extractJSON(data.content || "");
+    const content =
+      data?.choices?.[0]?.message?.content ||
+      data?.choices?.[0]?.text ||
+      "";
 
+    const parsed = extractJSON(content);
     if (!parsed) return ruleBased(text);
 
     return {
@@ -89,7 +99,7 @@ Teks: "${text}"
 
       source: "haiku-4.5",
     };
-  } catch {
+  } catch (err) {
     return ruleBased(text);
   }
 }
