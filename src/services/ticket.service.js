@@ -14,7 +14,7 @@ export async function createTicket(data) {
 
   const ai = await analyzeTextAI(data.message);
 
-  // console.log("ini ai: " + ai.usage);
+  console.log("ini ai: " + ai);
 
   const assignedToId = service.requiresManualAssignment
     ? null

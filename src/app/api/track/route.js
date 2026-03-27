@@ -37,6 +37,9 @@ export async function POST(req) {
     // 🔎 cari tiket di database
     const found = await prisma.ticket.findUnique({
       where: { ticketNumber: ticket },
+      include: {
+        service: true,
+      },
     });
 
     if (!found) {
