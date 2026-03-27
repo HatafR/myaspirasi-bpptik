@@ -8,9 +8,7 @@ const WINDOW = 60; // seconds
 export async function POST(req) {
   try {
     // ambil IP untuk rate limit
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0] ||
-      "anonymous";
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
 
     const key = `ratelimit:track:${ip}`;
 
@@ -23,7 +21,7 @@ export async function POST(req) {
     if (current > LIMIT) {
       return NextResponse.json(
         { message: "Terlalu banyak request" },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
@@ -32,19 +30,19 @@ export async function POST(req) {
     if (!ticket) {
       return NextResponse.json(
         { message: "Nomor tiket wajib diisi" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 🔎 cari tiket di database
     const found = await prisma.ticket.findUnique({
-      where: { ticketNumber: ticket }, 
+      where: { ticketNumber: ticket },
     });
 
     if (!found) {
       return NextResponse.json(
         { message: "Nomor tiket tidak ditemukan" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -55,19 +53,18 @@ export async function POST(req) {
         id: found.id,
         name: found.name,
         email: found.email,
-        division: found.division,
+        service: found.service,
         status: found.status,
         message: found.message,
         createdAt: found.createdAt,
       },
     });
-
   } catch (err) {
     console.error("TRACK API ERROR:", err);
 
     return NextResponse.json(
       { message: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

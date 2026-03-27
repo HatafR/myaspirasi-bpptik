@@ -42,6 +42,13 @@ enum Sentiment {
   NEGATIF
 }
 
+enum AuditLogType {
+  STATUS_CHANGED
+  ASSIGNED
+  REASSIGNED
+  RATING_GIVEN
+}
+
 // ── MODELS ───────────────────────────
 
 model User {
@@ -61,6 +68,7 @@ model User {
   statusChanges    TicketStatusHistory[]
   auditLogs        AuditLog[]
   replies          AdminReply[]
+  actorId          TicketAuditLog[]
 }
 
 model Service {
@@ -116,6 +124,7 @@ model Ticket {
   rating          Rating?
   response        TicketResponse?
   replies         AdminReply[]
+  ticketId        TicketAuditLog[]
 }
 
 model TicketStatusHistory {
@@ -199,4 +208,26 @@ model AdminReply {
 
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   admin  User   @relation(fields: [userId], references: [id])
+}
+
+model TicketAuditLog {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  type      AuditLogType
+
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+
+  fromValue String?
+  toValue   String?
+
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([type])
+  @@index([actorId])
 }

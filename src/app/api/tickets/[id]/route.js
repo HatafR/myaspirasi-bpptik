@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { validateStatusTransition } from "@/lib/ticket-status";
 import { requireAuth, requireRole } from "@/lib/auth";
+import { AppError } from "@/lib/error";
 
 // ==========================
 // GET /api/tickets/:id
@@ -56,9 +57,11 @@ export async function GET(req, { params }) {
     );
   }
 }
+
 export async function PATCH(req, { params }) {
   try {
     const user = requireAuth(req);
+    if (!user) throw AppError("Required Login", "AUTH_INVALID", 401);
 
     const { id } = await params;
     const body = await req.json();
@@ -67,10 +70,11 @@ export async function PATCH(req, { params }) {
       where: { id },
     });
 
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket)
+      throw new AppError("Ticket not found", "TICKET_NOT_FOUND", 404);
 
     // ======================
-    // ASSIGN ADMIN
+    // ASSIGN / REASSIGN
     // ======================
     if (body.assignedToId) {
       const targetUser = await prisma.user.findUnique({
@@ -78,25 +82,46 @@ export async function PATCH(req, { params }) {
       });
 
       if (!targetUser) {
-        throw new Error("Assigned user not found");
+        throw new AppError("Assigned user not found", "USER_NOT_FOUND", 404);
       }
 
-      const updated = await prisma.ticket.update({
-        where: { id },
-        data: {
-          assignedToId: body.assignedToId,
-          status: "ASSIGNED",
-        },
-      });
+      const isReassign = ticket.assignedToId !== null;
 
-      // log history (non-critical)
-      await prisma.ticketStatusHistory.create({
-        data: {
-          ticketId: ticket.id,
-          status: "ASSIGNED",
-          changedById: user.userId,
-        },
-      });
+      const [updated] = await prisma.$transaction([
+        prisma.ticket.update({
+          where: { id },
+          data: {
+            assignedToId: body.assignedToId,
+            status: "ASSIGNED",
+          },
+        }),
+
+        prisma.ticketAuditLog.createMany({
+          data: [
+            // status change (kalau sebelumnya bukan ASSIGNED)
+            ...(ticket.status !== "ASSIGNED"
+              ? [
+                  {
+                    ticketId: ticket.id,
+                    type: "STATUS_CHANGED",
+                    fromValue: ticket.status,
+                    toValue: "ASSIGNED",
+                    actorId: user.userId,
+                  },
+                ]
+              : []),
+
+            // assignment event
+            {
+              ticketId: ticket.id,
+              type: isReassign ? "REASSIGNED" : "ASSIGNED",
+              fromValue: ticket.assignedToId,
+              toValue: body.assignedToId,
+              actorId: user.userId,
+            },
+          ],
+        }),
+      ]);
 
       return Response.json({
         success: true,
@@ -108,51 +133,60 @@ export async function PATCH(req, { params }) {
     // UPDATE STATUS
     // ======================
     if (!body.status) {
-      throw new Error("No update payload");
+      throw new AppError("No update payload", "PAYLOAD_NOT_FOUND", 404);
     }
 
     if (!validateStatusTransition(ticket.status, body.status)) {
-      throw new Error("Invalid status transition");
+      throw new AppError("Invalid status transition", "VALIDATION_ERROR", 400);
     }
 
-    const updated = await prisma.ticket.update({
-      where: { id },
-      data: {
-        status: body.status,
-        closedAt:
-          body.status === "CLOSED"
-            ? ticket.closedAt || new Date()
-            : ticket.closedAt,
-      },
-    });
+    const [updated] = await prisma.$transaction([
+      prisma.ticket.update({
+        where: { id },
+        data: {
+          status: body.status,
+          closedAt:
+            body.status === "CLOSED"
+              ? ticket.closedAt || new Date()
+              : ticket.closedAt,
+        },
+      }),
 
-    // history = secondary
-    await prisma.ticketStatusHistory.create({
-      data: {
-        ticketId: ticket.id,
-        status: body.status,
-        changedById: user.userId,
-      },
-    });
+      prisma.ticketAuditLog.create({
+        data: {
+          ticketId: ticket.id,
+          type: "STATUS_CHANGED",
+          fromValue: ticket.status,
+          toValue: body.status,
+          actorId: user.userId,
+        },
+      }),
+    ]);
 
     return Response.json({
       success: true,
       data: updated,
     });
-  } catch (err) {
+  } catch (e) {
+    if (e instanceof AppError) {
+      return Response.json(
+        {
+          success: false,
+          message: e.message,
+          code: e.code,
+        },
+        { status: e.status },
+      );
+    }
+
+    // unknown error (JANGAN expose)
     return Response.json(
       {
         success: false,
-        message: err.message,
+        message: "Internal server error",
+        code: "SERVER_ERROR",
       },
-      {
-        status:
-          err.message === "Ticket not found"
-            ? 404
-            : err.message === "Forbidden"
-              ? 403
-              : 400,
-      },
+      { status: 500 },
     );
   }
 }
