@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
+import { Prisma } from "@prisma/client";
+
 // ==========================
 // GET /api/tickets/:id/rating
 // ==========================
@@ -31,17 +33,24 @@ export async function GET(req, { params }) {
 // ==========================
 export async function POST(req, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
-    const { rating, comment } = body;
 
     // ✅ VALIDATION
-    if (!rating || rating < 1 || rating > 5) {
-      throw new Error("Rating must be between 1-5");
+    const parsedRating = Number(body.rating);
+    const comment = body.comment?.trim() || null;
+    console.log(id);
+
+    if (
+      !Number.isInteger(parsedRating) ||
+      parsedRating < 1 ||
+      parsedRating > 5
+    ) {
+      throw new Error("Rating must be integer 1-5");
     }
 
     const ticket = await prisma.ticket.findUnique({
-      where: { id },
+      where: { ticketNumber: id },
     });
 
     if (!ticket) {
@@ -53,13 +62,40 @@ export async function POST(req, { params }) {
       throw new Error("Rating only allowed after ticket is resolved or closed");
     }
 
-    // ✅ CREATE (rely on unique constraint)
-    const result = await prisma.rating.create({
-      data: {
-        ticketId: id,
-        score: rating,
-        comment: comment?.trim() || null,
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.rating.findUnique({
+        where: { ticketId: ticket.id },
+      });
+
+      if (existing) {
+        throw new Error("Rating already exists");
+      }
+
+      const rating = await tx.rating.create({
+        data: {
+          ticketId: ticket.id,
+          score: parsedRating,
+          comment,
+        },
+      });
+
+      await tx.ticket.update({
+        where: { id: ticket.id },
+        data: {
+          status: "CLOSED",
+          closedAt: new Date(),
+        },
+      });
+
+      await tx.ticketStatusHistory.create({
+        data: {
+          ticketId: ticket.id,
+          status: "CLOSED",
+          changedById: null,
+        },
+      });
+
+      return rating;
     });
 
     return Response.json(
@@ -70,19 +106,24 @@ export async function POST(req, { params }) {
       { status: 201 },
     );
   } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === "P2002") {
+        return Response.json(
+          {
+            success: false,
+            message: "User already submitted rating",
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     return Response.json(
       {
         success: false,
         message: err.message,
       },
-      {
-        status:
-          err.message === "Ticket not found"
-            ? 404
-            : err.message.includes("Unique constraint")
-              ? 409
-              : 400,
-      },
+      { status: 400 },
     );
   }
 }

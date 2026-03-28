@@ -1369,96 +1369,65 @@ const AdminDashboard = () => {
                         )}
 
                         {/* ── Balas/Tanggapi */}
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 800,
-                              color: "#5A6E8C",
-                              marginBottom: 8,
-                              textTransform: "uppercase",
-                              letterSpacing: 0.5,
-                            }}
-                          >
-                            Tanggapan Admin
+                        {/* ── Tanggapan User (READ ONLY) */}
+                        {(t.status === "Resolved" || t.status === "Closed") && (
+                          <div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: "#5A6E8C",
+                                marginBottom: 8,
+                                textTransform: "uppercase",
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              Tanggapan User
+                            </div>
+
+                            {!t.rating ? (
+                              <div
+                                style={{
+                                  padding: "10px 14px",
+                                  borderRadius: 8,
+                                  background: "#F8FAFF",
+                                  border: "1px solid #C8D8EE",
+                                  fontSize: 12,
+                                  color: "#94A3B8",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                ⏳ User belum memberikan rating & tanggapan
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  background: "#F8FAFF",
+                                  borderRadius: 10,
+                                  padding: "12px 14px",
+                                  border: "1px solid #C8D8EE",
+                                }}
+                              >
+                                {/* Rating */}
+                                <div style={{ marginBottom: 6 }}>
+                                  {"⭐".repeat(t.rating.score)}
+                                  {"☆".repeat(5 - t.rating.score)}
+                                </div>
+
+                                {/* Comment */}
+                                <div
+                                  style={{
+                                    fontSize: 13,
+                                    color: "#374151",
+                                    lineHeight: 1.6,
+                                  }}
+                                >
+                                  {t.rating.comment || "Tidak ada komentar"}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <textarea
-                            value={reply}
-                            onChange={(e) => setReply(e.target.value)}
-                            placeholder="Tulis tanggapan untuk pelapor..."
-                            rows={3}
-                            style={{
-                              width: "100%",
-                              padding: "10px 12px",
-                              borderRadius: 10,
-                              border: "1.5px solid #C8D8EE",
-                              outline: "none",
-                              resize: "vertical",
-                              fontSize: 13,
-                              fontFamily: "inherit",
-                              color: "#0F1F4B",
-                              boxSizing: "border-box",
-                              lineHeight: 1.6,
-                            }}
-                          />
-                          <button
-                            onClick={async () => {
-                              if (!reply.trim()) return;
-
-                              const token = localStorage.getItem("token");
-
-                              try {
-                                const res = await fetch(
-                                  `/api/tickets/${t.id}/response`,
-                                  {
-                                    method: "POST",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                      Authorization: `Bearer ${token}`,
-                                    },
-                                    body: JSON.stringify({
-                                      content: reply,
-                                    }),
-                                  },
-                                );
-
-                                const result = await res.json();
-
-                                if (!result.success) {
-                                  throw new Error(result.message);
-                                }
-
-                                showToast("✅ Tanggapan berhasil dikirim!");
-                                setSelected((prev) => ({
-                                  ...prev,
-                                  response: {
-                                    ...prev.response,
-                                    content: reply,
-                                  },
-                                }));
-                              } catch (err) {
-                                console.error(err);
-                                showToast("❌ Gagal kirim tanggapan", "error");
-                              }
-                            }}
-                            style={{
-                              marginTop: 8,
-                              padding: "9px 20px",
-                              borderRadius: 9,
-                              border: "none",
-                              background:
-                                "linear-gradient(135deg, #1A3A8F, #1E50A2)",
-                              color: "#fff",
-                              fontWeight: 700,
-                              fontSize: 13,
-                              cursor: "pointer",
-                              fontFamily: "inherit",
-                              boxShadow: "0 3px 12px rgba(26,58,143,0.25)",
-                            }}
-                          >
-                            📨 Kirim Tanggapan
-                          </button>
-                        </div>
+                        )}
                       </div>
                     </div>
                   );

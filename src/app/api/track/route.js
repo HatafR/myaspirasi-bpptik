@@ -56,6 +56,7 @@ export async function POST(req) {
       success: true,
       ticket: {
         id: found.id,
+        ticketNumber: found.ticketNumber,
         name: found.name,
         email: found.email,
         service: found.service,

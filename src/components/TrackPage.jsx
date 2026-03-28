@@ -136,6 +136,7 @@ const TrackPage = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rating, setRating] = useState(0);
   const [tanggapan, setTanggapan] = useState("");
   const [tanggapanSent, setTanggapanSent] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
@@ -193,6 +194,43 @@ const TrackPage = () => {
     background: "var(--bg)",
     backgroundImage: `radial-gradient(circle at 20% 20%, rgba(30,80,162,0.06) 0%, transparent 50%),
       radial-gradient(circle at 80% 80%, rgba(26,58,143,0.05) 0%, transparent 50%)`,
+  };
+
+  const submitRating = async () => {
+    if (!rating) {
+      showToast("Rating wajib diisi", "error");
+      return;
+    }
+
+    try {
+      console.log("SUBMIT RATING:", {
+        ticketNumber: result.ticketNumber,
+        rating,
+        tanggapan,
+      });
+
+      const res = await fetch(`/api/tickets/${result.ticketNumber}/rating`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating,
+          comment: tanggapan,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("API ERROR:", data);
+        throw new Error(data.message);
+      }
+
+      setTanggapanSent(true);
+      showToast("✅ Feedback berhasil dikirim!");
+    } catch (err) {
+      console.error("SUBMIT ERROR:", err);
+      showToast(err.message, "error");
+    }
   };
 
   return (
@@ -554,136 +592,88 @@ const TrackPage = () => {
             </div>
 
             {/* Tanggapan User Section */}
-            {result.status === "RESOLVED" &&
-              (() => {
-                // Logic sisa hari
-                const history = JSON.parse(
-                  localStorage.getItem("ticket_history") || "[]",
-                ).filter(
-                  (h) => h.ticketId === result.id && h.status === "RESOLVED",
-                );
-                const resolvedAt =
-                  history.length > 0
-                    ? new Date(history[0].changedAt)
-                    : new Date(result.createdAt);
-                const daysSince =
-                  (Date.now() - resolvedAt.getTime()) / (1000 * 60 * 60 * 24);
-                const sisaHari = Math.max(0, Math.ceil(3 - daysSince));
-                const expired = daysSince > 3;
-
-                return (
-                  <div
-                    style={{
-                      padding: "20px 28px",
-                      borderTop: "1px solid #C8D8EE",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 800,
-                        color: "#5A6E8C",
-                        textTransform: "uppercase",
-                        marginBottom: 12,
-                      }}
-                    >
-                      Tanggapan Anda
-                    </div>
-                    {tanggapanSent ? (
-                      <div
-                        style={{
-                          padding: "12px 16px",
-                          background: "#DCFCE7",
-                          color: "#15803D",
-                          borderRadius: 10,
-                          fontSize: 13,
-                        }}
-                      >
-                        ✅ Tanggapan berhasil dikirim.
-                      </div>
-                    ) : expired ? (
-                      <div
-                        style={{
-                          padding: "12px 16px",
-                          background: "#F1F5F9",
-                          color: "#475569",
-                          borderRadius: 10,
-                          fontSize: 13,
-                        }}
-                      >
-                        ⏰ Waktu habis. Tiket akan segera ditutup.
-                      </div>
-                    ) : (
-                      <div>
-                        <textarea
-                          value={tanggapan}
-                          onChange={(e) => setTanggapan(e.target.value)}
-                          placeholder="Tulis tanggapan..."
-                          style={{
-                            width: "100%",
-                            padding: "10px",
-                            borderRadius: 10,
-                            border: "1.5px solid #C8D8EE",
-                            minHeight: 80,
-                          }}
-                        />
-                        <button
-                          onClick={() => setTanggapanSent(true)}
-                          style={{
-                            marginTop: 10,
-                            padding: "8px 16px",
-                            background: "#1A3A8F",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 8,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Kirim Tanggapan
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-            {/* Rating CTA */}
-            {(result.status === "RESOLVED" || result.status === "CLOSED") && (
+            {result.status === "RESOLVED" && !result.rating && (
               <div
                 style={{
-                  margin: "0 28px 24px",
-                  padding: "16px 20px",
-                  borderRadius: 12,
-                  background: "linear-gradient(135deg, #DCFCE7, #F0FDF4)",
-                  border: "1px solid #BBF7D0",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  padding: "20px 28px",
+                  borderTop: "1px solid #C8D8EE",
                 }}
               >
-                <div>
-                  <div
-                    style={{ fontWeight: 800, fontSize: 13, color: "#15803D" }}
-                  >
-                    ⭐ Tiket Anda telah selesai!
-                  </div>
-                  <div style={{ fontSize: 12, color: "#166534" }}>
-                    Beri penilaian untuk layanan kami.
-                  </div>
-                </div>
-                <button
-                  onClick={() => router.push(`/rating/${result.ticketNumber}`)}
+                <div
                   style={{
-                    padding: "8px 18px",
-                    borderRadius: 9,
-                    border: "none",
-                    background: "#15803D",
-                    color: "#fff",
-                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: "#5A6E8C",
+                    textTransform: "uppercase",
+                    marginBottom: 12,
                   }}
                 >
-                  Beri Rating →
-                </button>
+                  Beri Penilaian
+                </div>
+
+                {tanggapanSent ? (
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      background: "#DCFCE7",
+                      color: "#15803D",
+                      borderRadius: 10,
+                      fontSize: 13,
+                    }}
+                  >
+                    ✅ Terima kasih! Penilaian Anda telah dikirim.
+                  </div>
+                ) : (
+                  <div>
+                    {/* ⭐ STAR RATING */}
+                    <div style={{ marginBottom: 12 }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                          key={star}
+                          onClick={() => setRating(star)}
+                          style={{
+                            fontSize: 26,
+                            cursor: "pointer",
+                            color: star <= rating ? "#F7C200" : "#CBD5E1",
+                            transition: "0.2s",
+                          }}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* TEXTAREA */}
+                    <textarea
+                      value={tanggapan}
+                      onChange={(e) => setTanggapan(e.target.value)}
+                      placeholder="Tulis tanggapan (opsional)..."
+                      style={{
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: 10,
+                        border: "1.5px solid #C8D8EE",
+                        minHeight: 80,
+                      }}
+                    />
+
+                    {/* BUTTON */}
+                    <button
+                      onClick={submitRating}
+                      style={{
+                        marginTop: 12,
+                        padding: "8px 18px",
+                        background: "#1A3A8F",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Kirim Penilaian
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
