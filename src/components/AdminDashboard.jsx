@@ -398,7 +398,7 @@ const AdminDashboard = () => {
             ? {
                 ...t,
                 assignedToId: adminId,
-                status: "Open",
+                status: "Assigned",
               }
             : t,
         ),
@@ -408,7 +408,7 @@ const AdminDashboard = () => {
         setSelected((prev) => ({
           ...prev,
           assignedToId: adminId,
-          status: "Open",
+          status: "Assigned",
         }));
       }
 

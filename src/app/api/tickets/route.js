@@ -78,36 +78,51 @@ export async function GET(req) {
 // ==========================
 export async function POST(req) {
   try {
-    // ambil IP user
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0] ||
-      "anonymous";
-
-    const key = `ratelimit:${ip}`;
-
-    // check rate limit
-    const current = await redis.incr(key);
-
-    if (current === 1) {
-      await redis.expire(key, WINDOW);
-    }
-
-    if (current > LIMIT) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Terlalu banyak kirim aspirasi. Tunggu 60 detik.",
-        },
-        { status: 429 }
-      );
-    }
-
     // =====================
     // CREATE TICKET
     // =====================
     const body = await req.json();
 
-    const parsed = ticketSchema.safeParse(body);
+    const { captchaToken, ...payload } = body;
+
+    if (!captchaToken) {
+      return Response.json(
+        {
+          success: false,
+          message: "Captcha wajib",
+        },
+        { status: 400 },
+      );
+    }
+
+    // verify captcha dulu
+    const verifyRes = await fetch(
+      "https://www.google.com/recaptcha/api/siteverify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          secret: process.env.RECAPTCHA_SECRET_KEY,
+          response: captchaToken,
+        }),
+      },
+    );
+
+    const data = await verifyRes.json();
+
+    if (!data.success) {
+      return Response.json(
+        {
+          success: false,
+          message: "Captcha tidak valid",
+        },
+        { status: 400 },
+      );
+    }
+
+    const parsed = ticketSchema.safeParse(payload);
 
     if (!parsed.success) {
       return Response.json(
