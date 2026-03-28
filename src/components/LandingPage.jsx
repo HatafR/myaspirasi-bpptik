@@ -9,7 +9,7 @@ import SentimentBadge from "@/components/SentimentBadge";
 import CategoryBadge from "@/components/CategoryBadge";
 import Navbar from "@/components/Navbar";
 import { analyzeTextAI } from "@/lib/ai-analyze";
-import {Turnstile} from "@marsidev/react-turnstile";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 const STATUS_MAP = {
   Open: { bg: "#EFF6FF", color: "#1A3A8F", border: "#C8D8EE", icon: "🔵" },
@@ -85,29 +85,28 @@ const LandingPage = () => {
 
   const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
+  const handleSubmit = async () => {
+    if (!captchaToken) {
+      alert("Silakan verifikasi captcha terlebih dahulu");
+      return;
+    }
 
-   const handleSubmit = async () => {
-  if (!captchaToken) {
-    alert("Silakan verifikasi captcha terlebih dahulu");
-    return;
-  }
+    if (!service || !message.trim()) return;
 
-  if (!service || !message.trim()) return;
+    if (!subject.trim()) {
+      setSubjectError("Subjek wajib diisi");
+      return;
+    }
 
-  if (!subject.trim()) {
-    setSubjectError("Subjek wajib diisi");
-    return;
-  }
+    if (!email.trim()) {
+      setEmailError("Email wajib diisi");
+      return;
+    }
 
-  if (!email.trim()) {
-    setEmailError("Email wajib diisi");
-    return;
-  }
-
-  if (!validateEmail(email)) {
-    setEmailError("Format email tidak valid");
-    return;
-  }
+    if (!validateEmail(email)) {
+      setEmailError("Format email tidak valid");
+      return;
+    }
 
     setSubmitting(true);
 
@@ -128,20 +127,20 @@ const LandingPage = () => {
 
       console.log(res);
 
-    const result = await res.json();
+      const result = await res.json();
 
-    if (!res.ok) {
-      throw new Error(result.message || "Gagal submit");
+      if (!res.ok) {
+        throw new Error(result.message || "Gagal submit");
+      }
+
+      setSubmitted(result.data);
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitted(result.data);
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
   // BG pattern
   const bgStyle = {
     minHeight: "100vh",
@@ -330,7 +329,7 @@ const LandingPage = () => {
                 {[
                   ["Nomor Tiket", submitted.ticketNumber],
                   ["Subjek", submitted.subject || "-"],
-                  ["Layanan", `${div?.icon} ${div?.name}`],
+                  ["Layanan", [div?.icon, div?.name].filter(Boolean).join(" ")],
                   ["Tanggal", formatDate(submitted.createdAt)],
                   ["Email", submitted.email],
                 ].map(([label, val], i) => (
@@ -365,46 +364,6 @@ const LandingPage = () => {
                     </span>
                   </div>
                 ))}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "10px 20px",
-                    borderBottom: "1px solid #C8D8EE",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 13,
-                      color: "var(--gray)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Sentimen
-                  </span>
-                  <SentimentBadge sentiment={submitted.sentiment} />
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "10px 20px",
-                    borderBottom: "1px solid #C8D8EE",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 13,
-                      color: "var(--gray)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Kategori
-                  </span>
-                  <CategoryBadge category={submitted.category} />
-                </div>
                 <div
                   style={{
                     display: "flex",
@@ -927,12 +886,12 @@ const LandingPage = () => {
             )}
           </div>
 
-        {/* CAPTCHA */}
+          {/* CAPTCHA */}
           <div style={{ display: "flex", justifyContent: "center" }}>
             <Turnstile
-             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
-             onSuccess={(token) => setCaptchaToken(token)}
-             />
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+              onSuccess={(token) => setCaptchaToken(token)}
+            />
           </div>
 
           {/* Submit */}
