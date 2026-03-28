@@ -44,6 +44,8 @@ const LoginPage = () => {
       const result = await res.json();
 
       if (!result.success) {
+        window.grecaptcha?.reset();
+        setCaptchaToken("");
         throw new Error(result.message);
       }
 
@@ -58,18 +60,21 @@ const LoginPage = () => {
     }
   };
 
+  // if (typeof window !== "undefined") {
+  //   window.onTurnstileSuccess = function (token) {
+  //     setCaptchaToken(token);
+  //   };
+  // }
+
   if (typeof window !== "undefined") {
-    window.onTurnstileSuccess = function (token) {
+    window.onRecaptchaSuccess = function (token) {
       setCaptchaToken(token);
     };
   }
 
   return (
     <>
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-        strategy="afterInteractive"
-      />
+      <Script src="https://www.google.com/recaptcha/api.js" />
 
       <div
         style={{
@@ -324,11 +329,20 @@ const LoginPage = () => {
             </div>
 
             {/* Cloudflare Turnstile */}
-            <div style={{ marginBottom: 18 }}>
+            {/* <div style={{ marginBottom: 18 }}>
               <div
                 className="cf-turnstile"
                 data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
                 data-callback="onTurnstileSuccess"
+              ></div>
+            </div> */}
+
+            {/*reCaptcha Google*/}
+            <div style={{ marginBottom: 18 }}>
+              <div
+                className="g-recaptcha"
+                data-sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                data-callback="onRecaptchaSuccess"
               ></div>
             </div>
 
