@@ -5,12 +5,16 @@ import { NextResponse } from "next/server";
 const LIMIT = 5;
 const WINDOW = 60; // seconds
 
+function getClientKey(req) {
+  const ua = req.headers.get("user-agent") || "unknown";
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
+
+  return `ratelimit:track:${ip}:${ua}`;
+}
+
 export async function POST(req) {
   try {
-    // ambil IP untuk rate limit
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
-
-    const key = `ratelimit:track:${ip}`;
+    const key = getClientKey(req);
 
     const current = await redis.incr(key);
 
@@ -34,7 +38,6 @@ export async function POST(req) {
       );
     }
 
-    // 🔎 cari tiket di database
     const found = await prisma.ticket.findUnique({
       where: { ticketNumber: ticket },
       include: {
@@ -49,7 +52,6 @@ export async function POST(req) {
       );
     }
 
-    // return sesuai kebutuhan UI
     return NextResponse.json({
       success: true,
       ticket: {
