@@ -123,7 +123,7 @@ const LandingPage = () => {
           serviceId: service, // 🔥 ini kunci (bukan division lagi)
           subject: subject.trim(),
           message: message.trim(),
-          captchaToken
+          captchaToken,
         }),
       });
 
@@ -168,7 +168,7 @@ const LandingPage = () => {
       {/* Gedung photo */}
       <img
         src="/gedung-bpptik.jpg"
-        alt="Gedung BPT BPT Komdigi"
+        alt="Gedung BPT Komdigi"
         style={{
           width: "100%",
           height: "100%",
@@ -225,7 +225,7 @@ const LandingPage = () => {
               animation: "pulse-dot 2s infinite",
             }}
           />
-          Platform Aspirasi Digital · BPT BPT Komdigi BPT Komdigi
+          Platform Aspirasi Digital · BPT Komdigi BPT Komdigi
         </div>
         <h1
           style={{
@@ -248,8 +248,8 @@ const LandingPage = () => {
             lineHeight: 1.5,
           }}
         >
-          Kritik, saran, dan masukan Anda membantu BPT BPT Komdigi berkembang
-          lebih baik
+          Kritik, saran, dan masukan Anda membantu BPT Komdigi berkembang lebih
+          baik
         </p>
       </div>
     </div>
