@@ -94,8 +94,8 @@ const SERVICES = [
     adminUsername: "admin.perencanaan",
   },
   {
-    name: "Pertanyaan Umum",
-    description: "Pertanyaan umum yang tidak termasuk kategori di atas",
+    name: "Lainnya",
+    description: "Pertanyaan lainnya yang tidak termasuk kategori di atas",
     icon: "❓",
     color: "#475569",
     bgColor: "#F1F5F9",
@@ -111,13 +111,6 @@ const adminCredentials = [
     username: "admin.super",
     hashedPassword: hashedPasswordSuper,
     role: UserRole.SUPER_ADMIN,
-  },
-  {
-    name: "Admin IT",
-    email: "it@ticketing.local",
-    username: "admin.it",
-    hashedPassword: hashedPasswordIt,
-    role: UserRole.SERVICE_ADMIN,
   },
   {
     name: "Admin General",
@@ -215,7 +208,6 @@ async function main() {
   }
 
   const superAdmin = adminMap["admin.super"];
-  const itAdmin = adminMap["admin.it"];
 
   // Create services from SERVICES array with assigned admins
   for (const service of SERVICES) {
@@ -253,41 +245,6 @@ async function main() {
       name: "System",
       role: UserRole.SYSTEM,
       isActive: true,
-    },
-  });
-
-  // Create default services
-  await prisma.service.upsert({
-    where: { name: "Informasi Digital" },
-    update: {
-      assignedAdminId: itAdmin.id,
-      requiresManualAssignment: false,
-    },
-    create: {
-      name: "Informasi Digital",
-      requiresManualAssignment: false,
-      assignedAdminId: itAdmin.id,
-    },
-  });
-
-  await prisma.service.upsert({
-    where: { name: "Pengaduan Infrastruktur" },
-    update: {
-      assignedAdminId: superAdmin.id,
-    },
-    create: {
-      name: "Pengaduan Infrastruktur",
-      requiresManualAssignment: false,
-      assignedAdminId: superAdmin.id,
-    },
-  });
-
-  await prisma.service.upsert({
-    where: { name: "Lainnya" },
-    update: {},
-    create: {
-      name: "Lainnya",
-      requiresManualAssignment: true,
     },
   });
 }
