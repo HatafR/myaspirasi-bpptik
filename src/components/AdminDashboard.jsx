@@ -172,6 +172,7 @@ const AdminDashboard = () => {
   const [toast, setToast] = useState(null);
   const [adminSearch, setAdminSearch] = useState("");
   const [showAdminDropdown, setShowAdminDropdown] = useState(false);
+  const [selectedAdminId, setSelectedAdminId] = useState(null);
   const dropdownRef = useRef(null);
 
   const showToast = (msg, type = "success") => {
@@ -251,6 +252,9 @@ const AdminDashboard = () => {
     } else {
       setReply("");
     }
+    setSelectedAdminId(null);
+    setShowAdminDropdown(false);
+    setAdminSearch("");
   }, [selectedTicket]);
 
   useEffect(() => {
@@ -917,7 +921,7 @@ const AdminDashboard = () => {
                         border: "1.5px solid #C8D8EE",
                         height: "fit-content",
                         boxShadow: "0 4px 24px rgba(26,58,143,0.08)",
-                        overflow: "hidden",
+                        overflow: "visible",
                       }}
                     >
                       {/* Detail header */}
@@ -1302,32 +1306,42 @@ const AdminDashboard = () => {
                                         overflowY: "auto",
                                       }}
                                     >
-                                      {filteredAdmins.map((a) => (
-                                        <div
-                                          key={a.id}
-                                          onClick={() => {
-                                            assignTicket(t.id, a.id);
-                                            setShowAdminDropdown(false);
-                                            setAdminSearch("");
-                                          }}
-                                          style={{
-                                            padding: "6px 8px",
-                                            borderRadius: 6,
-                                            cursor: "pointer",
-                                            fontSize: 12,
-                                          }}
-                                          onMouseEnter={(e) =>
-                                            (e.currentTarget.style.background =
-                                              "#F0F5FB")
-                                          }
-                                          onMouseLeave={(e) =>
-                                            (e.currentTarget.style.background =
-                                              "transparent")
-                                          }
-                                        >
-                                          👤 {a.name}
-                                        </div>
-                                      ))}
+                                      {filteredAdmins.map((a) => {
+                                        const isSelected =
+                                          selectedAdminId === a.id;
+                                        return (
+                                          <div
+                                            key={a.id}
+                                            onClick={() => {
+                                              setSelectedAdminId(a.id);
+                                            }}
+                                            style={{
+                                              padding: "6px 8px",
+                                              borderRadius: 6,
+                                              cursor: "pointer",
+                                              fontSize: 12,
+                                              background: isSelected
+                                                ? "#E0F2FE"
+                                                : "transparent",
+                                              border: isSelected
+                                                ? "1px solid #BAE6FD"
+                                                : "none",
+                                            }}
+                                            onMouseEnter={(e) =>
+                                              (e.currentTarget.style.background =
+                                                "#F0F5FB")
+                                            }
+                                            onMouseLeave={(e) =>
+                                              (e.currentTarget.style.background =
+                                                isSelected
+                                                  ? "#E0F2FE"
+                                                  : "transparent")
+                                            }
+                                          >
+                                            👤 {a.name}
+                                          </div>
+                                        );
+                                      })}
 
                                       {filteredAdmins.length === 0 && (
                                         <div
@@ -1340,6 +1354,40 @@ const AdminDashboard = () => {
                                         </div>
                                       )}
                                     </div>
+
+                                    <button
+                                      onClick={async () => {
+                                        if (!selectedAdminId) return;
+                                        await assignTicket(
+                                          t.id,
+                                          selectedAdminId,
+                                        );
+                                        setShowAdminDropdown(false);
+                                        setAdminSearch("");
+                                        setSelectedAdminId(null);
+                                      }}
+                                      disabled={!selectedAdminId}
+                                      style={{
+                                        width: "100%",
+                                        marginTop: 8,
+                                        padding: "8px 12px",
+                                        borderRadius: 8,
+                                        border: "1.5px solid #1A3A8F",
+                                        background: selectedAdminId
+                                          ? "#1A3A8F"
+                                          : "#F0F5FB",
+                                        color: selectedAdminId
+                                          ? "#fff"
+                                          : "#94A3B8",
+                                        fontWeight: 700,
+                                        cursor: selectedAdminId
+                                          ? "pointer"
+                                          : "not-allowed",
+                                        fontSize: 12,
+                                      }}
+                                    >
+                                      Serahkan ke Admin
+                                    </button>
                                   </div>
                                 )}
                               </div>
