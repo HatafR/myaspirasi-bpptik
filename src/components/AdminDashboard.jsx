@@ -269,6 +269,13 @@ const AdminDashboard = () => {
   }, []);
 
   const getAssignableAdmins = (ticket) => {
+    const normalizedStatus = String(ticket.status || "").toLowerCase();
+    console.log("Normalized Status:", normalizedStatus);
+
+    if (normalizedStatus === "returned") {
+      return admins;
+    }
+
     if (ticket.service?.name === "Lainnya") {
       return admins;
     }
@@ -1241,7 +1248,7 @@ const AdminDashboard = () => {
                               Serahkan ke Admin Layanan
                             </div>
 
-                            {!t.assignedToId ? (
+                            {!t.assignedToId || t.status === "Returned" ? (
                               <div
                                 ref={dropdownRef}
                                 style={{ position: "relative", width: 260 }}
@@ -1386,7 +1393,9 @@ const AdminDashboard = () => {
                                         fontSize: 12,
                                       }}
                                     >
-                                      Serahkan ke Admin
+                                      {t.status === "Returned"
+                                        ? "Assign Ulang Admin"
+                                        : "Serahkan ke Admin"}
                                     </button>
                                   </div>
                                 )}
