@@ -21,6 +21,13 @@ const STATUS_MAP = {
     icon: "🟡",
     desc: "Tiket sedang dalam proses penanganan",
   },
+  Returned: {
+    bg: "#FEF2F2",
+    color: "#C0272D",
+    border: "#FECACA",
+    icon: "↩️",
+    desc: "Tiket dikembalikan untuk revisi",
+  },
   Resolved: {
     bg: "#DCFCE7",
     color: "#15803D",
@@ -44,6 +51,10 @@ const STATUS_CONFIG = {
   },
   ASSIGNED: {
     label: "On Progress",
+    step: 1,
+  },
+  RETURNED: {
+    label: "Returned",
     step: 1,
   },
   IN_PROGRESS: {
@@ -76,6 +87,14 @@ const STEP_CONFIG = [
     color: "#0369A1",
     border: "#BAE6FD",
     icon: "📌",
+  },
+  {
+    key: "RETURNED",
+    label: "Returned",
+    bg: "#FEF2F2",
+    color: "#C0272D",
+    border: "#FECACA",
+    icon: "↩️",
   },
   {
     key: "IN_PROGRESS",
@@ -225,6 +244,15 @@ const TrackPage = () => {
         throw new Error(data.message);
       }
 
+      setResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "CLOSED",
+              rating: data.data,
+            }
+          : prev,
+      );
       setTanggapanSent(true);
       showToast("✅ Feedback berhasil dikirim!");
     } catch (err) {
@@ -592,7 +620,7 @@ const TrackPage = () => {
             </div>
 
             {/* Tanggapan User Section */}
-            {result.status === "RESOLVED" && !result.rating && (
+            {(result.status === "RESOLVED" || result.status === "CLOSED") && (
               <div
                 style={{
                   padding: "20px 28px",
@@ -608,10 +636,45 @@ const TrackPage = () => {
                     marginBottom: 12,
                   }}
                 >
-                  Beri Penilaian
+                  {result.rating ? "Penilaian Anda" : "Beri Penilaian"}
                 </div>
 
-                {tanggapanSent ? (
+                {result.rating ? (
+                  <div>
+                    {/* ⭐ STAR RATING DISPLAY */}
+                    <div style={{ marginBottom: 12 }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                          key={star}
+                          style={{
+                            fontSize: 26,
+                            color:
+                              star <= result.rating.score
+                                ? "#F7C200"
+                                : "#CBD5E1",
+                          }}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* COMMENT DISPLAY */}
+                    {result.rating.comment && (
+                      <div
+                        style={{
+                          background: "#F8FAFF",
+                          borderRadius: 10,
+                          padding: "10px",
+                          border: "1px solid #C8D8EE",
+                          fontSize: 14,
+                        }}
+                      >
+                        {result.rating.comment}
+                      </div>
+                    )}
+                  </div>
+                ) : tanggapanSent ? (
                   <div
                     style={{
                       padding: "12px 16px",

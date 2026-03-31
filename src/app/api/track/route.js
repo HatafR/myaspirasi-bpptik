@@ -42,6 +42,7 @@ export async function POST(req) {
       where: { ticketNumber: ticket },
       include: {
         service: true,
+        rating: true,
       },
     });
 
@@ -63,6 +64,7 @@ export async function POST(req) {
         status: found.status,
         message: found.message,
         createdAt: found.createdAt,
+        rating: found.rating || null,
       },
     });
   } catch (err) {
