@@ -61,10 +61,26 @@ const Navbar = ({ ticketCount = 0 }) => {
             color: "rgba(255,255,255,0.7)",
             letterSpacing: 0.4,
             fontWeight: 500,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
           }}
         >
-          Balai Pelatihan Talenta Komunikasi dan Digital · Kementerian
-          Komunikasi dan Digital RI
+          <div
+            style={{
+              display: "inline-block",
+              paddingLeft: "100%",
+              animation: "marquee 15s linear infinite",
+            }}
+          >
+            Balai Pelatihan Talenta Komunikasi dan Digital · Kementerian
+            Komunikasi dan Digital RI
+          </div>
+          <style>
+            {`@keyframes marquee {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-100%); }
+            }`}
+          </style>
         </div>
 
         {/* Main bar */}
