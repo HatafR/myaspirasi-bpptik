@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
 import analyzeText from "@/services/analyzeText";
 import generateTicketId from "@/utils/generateTicketId";
 import formatDate from "@/utils/formatDate";
@@ -86,13 +87,43 @@ const LandingPage = () => {
 
   const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
+  const mapValidationText = (raw) => {
+    if (!raw) return "Terjadi kesalahan validasi";
+    const message = Array.isArray(raw) ? raw.join(" \n") : raw;
+
+    const tooSmallMatch = message.match(
+      /Too small: expected string to have >=(\d+) characters/,
+    );
+    if (tooSmallMatch) {
+      return `Pesan terlalu pendek, minimal ${tooSmallMatch[1]} karakter`;
+    }
+
+    if (/required/i.test(message) && /string/i.test(message)) {
+      return "Kolom wajib diisi";
+    }
+
+    // Hati-hati jika sudah disediakan pesan baik dari backend, gunakan langsung.
+    return message;
+  };
+
   const handleSubmit = async () => {
     if (!captchaToken) {
-      alert("Silakan verifikasi captcha terlebih dahulu");
+      Swal.fire({
+        icon: "warning",
+        title: "Verifikasi Captcha",
+        text: "Silakan verifikasi captcha terlebih dahulu",
+      });
       return;
     }
 
-    if (!service || !message.trim()) return;
+    if (!service || !message.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Data belum lengkap",
+        text: "Layanan dan pesan harus diisi",
+      });
+      return;
+    }
 
     if (!subject.trim()) {
       setSubjectError("Subjek wajib diisi");
@@ -101,11 +132,21 @@ const LandingPage = () => {
 
     if (!email.trim()) {
       setEmailError("Email wajib diisi");
+      Swal.fire({
+        icon: "warning",
+        title: "Email belum diisi",
+        text: "Mohon lengkapi kolom email sebelum submit",
+      });
       return;
     }
 
     if (!validateEmail(email)) {
       setEmailError("Format email tidak valid");
+      Swal.fire({
+        icon: "warning",
+        title: "Format email tidak valid",
+        text: "Harap masukkan email dengan format contohnya email@domain.com",
+      });
       return;
     }
 
@@ -134,13 +175,34 @@ const LandingPage = () => {
       if (!res.ok) {
         window.grecaptcha?.reset();
         setCaptchaToken("");
-        throw new Error(result.message || "Gagal submit");
+
+        const rawMessage =
+          result?.message ||
+          (result?.errors?.message &&
+            (Array.isArray(result.errors.message)
+              ? result.errors.message
+              : [result.errors.message])) ||
+          [];
+
+        const apiError = mapValidationText(rawMessage);
+
+        throw new Error(apiError);
       }
 
       setSubmitted(result.data);
     } catch (err) {
       console.error(err);
-      alert(err.message);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Mengirim",
+        text:
+          err.message ||
+          (err?.response?.data?.message &&
+            (Array.isArray(err.response.data.message)
+              ? err.response.data.message.join(" \n")
+              : err.response.data.message)) ||
+          "Terjadi kesalahan saat mengirim tiket",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -391,7 +453,7 @@ const LandingPage = () => {
 
               <div style={{ display: "flex", gap: 12 }}>
                 <button
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => router.push("/track")}
                   style={{
                     flex: 1,
                     padding: "13px",
@@ -405,7 +467,7 @@ const LandingPage = () => {
                     fontFamily: "inherit",
                   }}
                 >
-                  📊 Lihat Dashboard
+                  🧭 Tracking Tiket
                 </button>
                 <button
                   onClick={() => window.location.reload()}
@@ -619,8 +681,17 @@ const LandingPage = () => {
                 placeholder="email@contoh.com"
                 value={email}
                 onChange={(e) => {
-                  setEmail(e.target.value);
-                  setEmailError("");
+                  const nextEmail = e.target.value;
+                  setEmail(nextEmail);
+                  if (!nextEmail.trim()) {
+                    setEmailError("");
+                    return;
+                  }
+                  if (!validateEmail(nextEmail)) {
+                    setEmailError("Format email tidak valid");
+                  } else {
+                    setEmailError("");
+                  }
                 }}
                 onFocus={(e) => (e.target.style.borderColor = "#1E50A2")}
                 onBlur={(e) =>
