@@ -125,6 +125,7 @@ model Ticket {
   response        TicketResponse?
   replies         AdminReply[]
   ticketId        TicketAuditLog[]
+  attachments     Attachment[]
 }
 
 model TicketStatusHistory {
@@ -230,4 +231,17 @@ model TicketAuditLog {
   @@index([ticketId])
   @@index([type])
   @@index([actorId])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  url       String
+  key       String   // path di R2
+  filename  String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id])
 }

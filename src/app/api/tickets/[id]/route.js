@@ -2,6 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { validateStatusTransition } from "@/lib/ticket-status";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { AppError } from "@/lib/error";
+import { sendTicketResolvedEmail } from "@/lib/mailer";
+
+const STATUS = ["SUBMITTED", "ASSIGNED", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+
+const statusHandlers = {
+  RESOLVED: sendTicketResolvedEmail,
+};
 
 // ==========================
 // GET /api/tickets/:id
@@ -68,6 +75,9 @@ export async function PATCH(req, { params }) {
 
     const ticket = await prisma.ticket.findUnique({
       where: { id },
+      include: {
+        service: true,
+      },
     });
 
     if (!ticket)
@@ -84,6 +94,9 @@ export async function PATCH(req, { params }) {
       if (!targetUser) {
         throw new AppError("Assigned user not found", "USER_NOT_FOUND", 404);
       }
+
+      const isAutoAssign =
+        !ticket.assignedToId && user.role !== "ADMIN_GENERAL";
 
       const isReassign = ticket.assignedToId !== null;
 
@@ -123,6 +136,19 @@ export async function PATCH(req, { params }) {
         }),
       ]);
 
+      try {
+        if (isAutoAssign) {
+          await notificationHandlers.AUTO_ASSIGNED(updated, targetUser.email);
+        } else {
+          await notificationHandlers.ASSIGNED_BY_ADMIN(
+            updated,
+            targetUser.email,
+          );
+        }
+      } catch (err) {
+        console.error("EMAIL_FAILED", err);
+      }
+
       return Response.json({
         success: true,
         data: updated,
@@ -134,6 +160,10 @@ export async function PATCH(req, { params }) {
     // ======================
     if (!body.status) {
       throw new AppError("No update payload", "PAYLOAD_NOT_FOUND", 404);
+    }
+
+    if (!STATUS.includes(body.status)) {
+      throw new AppError("Invalid status value", "VALIDATION_ERROR", 400);
     }
 
     if (!validateStatusTransition(ticket.status, body.status)) {
@@ -150,6 +180,9 @@ export async function PATCH(req, { params }) {
               ? ticket.closedAt || new Date()
               : ticket.closedAt,
         },
+        include: {
+          service: true,
+        },
       }),
 
       prisma.ticketAuditLog.create({
@@ -162,6 +195,22 @@ export async function PATCH(req, { params }) {
         },
       }),
     ]);
+
+    // console.log(updated);
+
+    const handler = statusHandlers[body.status];
+
+    if (handler && ticket.status !== body.status) {
+      try {
+        await handler(updated.email, updated);
+        console.log("TICKET SENT");
+      } catch (err) {
+        console.error("EMAIL_FAILED", {
+          ticketId: updated.id,
+          error: err.message,
+        });
+      }
+    }
 
     return Response.json({
       success: true,
