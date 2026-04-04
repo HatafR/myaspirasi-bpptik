@@ -6,4 +6,11 @@ export const ticketSchema = z.object({
   subject: z.string().trim().min(2).max(100).optional().or(z.literal("")),
   message: z.string().trim().min(10).max(2000),
   serviceId: z.uuid(),
+  attachment: z.object({
+    url: z.string(),
+    key: z.string(),
+    filename: z.string(),
+    mimeType: z.string(),
+    size: z.number(),
+  }).optional(),
 });

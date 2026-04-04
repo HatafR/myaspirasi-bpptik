@@ -97,14 +97,20 @@ const StatCard = ({
   label,
   color = "#1A3A8F",
   bg = "#E8EEF8",
+  onClick,
+  isActive = false,
 }) => (
   <div
+    onClick={onClick}
     style={{
       background: "#fff",
       borderRadius: 14,
       padding: "16px 18px",
-      border: "1px solid #C8D8EE",
-      boxShadow: "0 2px 12px rgba(26,58,143,0.06)",
+      border: isActive ? `2px solid ${color}` : "1px solid #C8D8EE",
+      boxShadow: isActive ? `0 4px 14px ${color}33` : "0 2px 12px rgba(26,58,143,0.06)",
+      cursor: onClick ? "pointer" : "default",
+      transition: "all 0.2s",
+      transform: isActive ? "translateY(-2px)" : "none",
     }}
   >
     <div
@@ -166,6 +172,8 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("tickets");
   const [selectedTicket, setSelected] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterSentiment, setFilterSentiment] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [reply, setReply] = useState("");
   const [sidebarOpen, setSidebar] = useState(false);
@@ -174,6 +182,35 @@ const AdminDashboard = () => {
   const [showAdminDropdown, setShowAdminDropdown] = useState(false);
   const [selectedAdminId, setSelectedAdminId] = useState(null);
   const dropdownRef = useRef(null);
+  const [loadingStatus, setLoadingStatus] = useState(null);
+
+  // ── Service Master State
+  const [services, setServices] = useState([]);
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [serviceForm, setServiceForm] = useState({
+    name: "",
+    description: "",
+    icon: "🛠️",
+    color: "#1A3A8F",
+    bgColor: "#E8EEF8",
+    requiresManualAssignment: false,
+    assignedAdminId: "",
+  });
+
+  // ── Admin Management State
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState(null);
+  const [adminForm, setAdminForm] = useState({
+    name: "",
+    username: "",
+    email: "",
+    password: "",
+    role: "SERVICE_ADMIN",
+    serviceIds: [],
+  });
+  const [confirmDelete, setConfirmDelete] = useState({ show: false, type: "", id: null, name: "" });
+
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -224,11 +261,14 @@ const AdminDashboard = () => {
         setTickets(normalized);
 
         if (u.role === "GENERAL_ADMIN" || u.role === "SUPER_ADMIN") {
-          const adminRes = await fetch("/api/admins", {
-            headers: {
-              Authorization: `Bearer ${token}`,
+          const adminRes = await fetch(
+            `/api/admins?type=all${u.role === "SUPER_ADMIN" ? "&all=true" : ""}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
             },
-          });
+          );
 
           const adminResult = await adminRes.json();
 
@@ -237,6 +277,18 @@ const AdminDashboard = () => {
           }
 
           setAdmins(adminResult.data);
+        }
+
+        if (u.role === "SUPER_ADMIN") {
+          const serviceRes = await fetch("/api/services?all=true", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const serviceResult = await serviceRes.json();
+          if (serviceResult.success) {
+            setServices(serviceResult.data);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -304,15 +356,24 @@ const AdminDashboard = () => {
 
   const isGeneral =
     user.role === "GENERAL_ADMIN" || user.role === "SUPER_ADMIN";
+  const isSuper = user.role === "SUPER_ADMIN";
   const myTickets = tickets;
   const filtered = myTickets.filter((t) => {
     const matchStatus = filterStatus === "all" || t.status === filterStatus;
+    const matchSentiment =
+      filterSentiment === "all" ||
+      t.sentiment?.toUpperCase() === filterSentiment.toUpperCase() ||
+      (filterSentiment === "Netral" && !t.sentiment);
+    const matchCategory =
+      filterCategory === "all" ||
+      t.category?.toUpperCase() === filterCategory.toUpperCase() ||
+      (filterCategory === "Komentar" && !t.category);
     const matchSearch =
       !search ||
       t.ticketNumber.toLowerCase().includes(search.toLowerCase()) ||
       t.name.toLowerCase().includes(search.toLowerCase()) ||
       t.message.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
+    return matchStatus && matchSentiment && matchCategory && matchSearch;
   });
 
   const count = (fn) => myTickets.filter(fn).length;
@@ -335,8 +396,21 @@ const AdminDashboard = () => {
     closed: count((t) => t.status === "Closed"),
   };
 
+  const sentimentStats = {
+    Positif: count((t) => t.sentiment?.toUpperCase() === "POSITIF"),
+    Netral: count((t) => !t.sentiment || t.sentiment?.toUpperCase() === "NETRAL"),
+    Negatif: count((t) => t.sentiment?.toUpperCase() === "NEGATIF"),
+  };
+
+  const categoryStats = {
+    Kritik: count((t) => t.category?.toUpperCase() === "KRITIK"),
+    Saran: count((t) => t.category?.toUpperCase() === "SARAN"),
+    Komentar: count((t) => !t.category || t.category?.toUpperCase() === "KOMENTAR"),
+  };
+
   // ── Actions
   const updateStatus = async (ticketId, newStatus) => {
+    setLoadingStatus(`${ticketId}-${newStatus}`);
     const token = localStorage.getItem("token");
 
     try {
@@ -361,9 +435,9 @@ const AdminDashboard = () => {
         prev.map((t) =>
           t.id === ticketId
             ? {
-                ...t,
-                status: newStatus,
-              }
+              ...t,
+              status: newStatus,
+            }
             : t,
         ),
       );
@@ -379,6 +453,8 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error(err);
       showToast("❌ Gagal update status", "error");
+    } finally {
+      setLoadingStatus(null);
     }
   };
 
@@ -407,10 +483,10 @@ const AdminDashboard = () => {
         prev.map((t) =>
           t.id === ticketId
             ? {
-                ...t,
-                assignedToId: adminId,
-                status: "Assigned",
-              }
+              ...t,
+              assignedToId: adminId,
+              status: "Assigned",
+            }
             : t,
         ),
       );
@@ -435,6 +511,149 @@ const AdminDashboard = () => {
     router.push("/login");
   };
 
+  const handleSaveService = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+    const isEdit = !!editingService;
+    const url = isEdit ? `/api/services/${editingService.id}` : "/api/services";
+    const method = isEdit ? "PATCH" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(serviceForm),
+      });
+
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message);
+
+      if (isEdit) {
+        setServices((prev) =>
+          prev.map((s) => (s.id === editingService.id ? result.data : s)),
+        );
+        showToast("✅ Layanan berhasil diperbarui");
+      } else {
+        setServices((prev) => [result.data, ...prev]);
+        showToast("✅ Layanan baru berhasil ditambahkan");
+      }
+
+      setShowServiceModal(false);
+      setEditingService(null);
+      setServiceForm({
+        name: "",
+        description: "",
+        icon: "🛠️",
+        color: "#1A3A8F",
+        bgColor: "#E8EEF8",
+        requiresManualAssignment: false,
+        assignedAdminId: "",
+      });
+    } catch (err) {
+      showToast(`❌ Gagal: ${err.message}`, "error");
+    }
+  };
+
+  const handleDeleteService = (id, name) => {
+    setConfirmDelete({ show: true, type: "services", id, name });
+  };
+
+  const handleSaveAdmin = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+    const isEdit = !!editingAdmin;
+    const url = isEdit ? `/api/admins/${editingAdmin.id}` : "/api/admins";
+    const method = isEdit ? "PATCH" : "POST";
+
+    if (
+      !adminForm.name ||
+      !adminForm.username ||
+      (!isEdit && !adminForm.password) ||
+      !adminForm.role
+    ) {
+      showToast("❌ Mohon lengkapi data wajib", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(adminForm),
+      });
+
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message);
+
+      if (isEdit) {
+        setAdmins((prev) =>
+          prev.map((a) => (a.id === editingAdmin.id ? result.data : a)),
+        );
+        showToast("✅ Akun admin berhasil diperbarui");
+      } else {
+        setAdmins((prev) => [result.data, ...prev]);
+        showToast("✅ Akun admin baru berhasil ditambahkan");
+      }
+
+      setShowAdminModal(false);
+      setEditingAdmin(null);
+    } catch (err) {
+      showToast(`❌ Gagal: ${err.message}`, "error");
+    }
+  };
+
+  const handleDeleteAdmin = (id, name) => {
+    setConfirmDelete({ show: true, type: "admins", id, name });
+  };
+
+  const executeSoftDelete = async () => {
+    const { type, id } = confirmDelete;
+    setConfirmDelete({ show: false, type: "", id: null, name: "" });
+
+    let token = localStorage.getItem("token");
+    if (!token) {
+      const session = localStorage.getItem("user_session");
+      if (session) token = JSON.parse(session).token;
+    }
+
+    try {
+      const res = await fetch(`/api/${type}/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive: false })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `Error ${res.status}`);
+      }
+
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message);
+
+      if (type === "admins") {
+        setAdmins((prev) => prev.map((a) => (a.id === id ? { ...a, isActive: false } : a)));
+        showToast("✅ Akun admin telah dinonaktifkan");
+      } else {
+        setServices((prev) => prev.map((s) => (s.id === id ? { ...s, isActive: false } : s)));
+        showToast("✅ Layanan telah dinonaktifkan");
+      }
+    } catch (err) {
+      console.error(`Delete ${type} failed:`, err);
+      showToast(`❌ Gagal: ${err.message}`, "error");
+    }
+  };
+
+
   const getServiceName = (ticket) =>
     ticket.service?.name || "Layanan Tidak Diketahui";
 
@@ -442,7 +661,12 @@ const AdminDashboard = () => {
   const navItems = [
     { id: "tickets", icon: "🎫", label: "Tiket Masuk", badge: stats.open },
     { id: "stats", icon: "📊", label: "Statistik" },
-    ...(isGeneral ? [{ id: "users", icon: "👥", label: "Kelola Admin" }] : []),
+    ...(isSuper
+      ? [
+        { id: "users", icon: "👥", label: "Kelola Admin" },
+        { id: "services", icon: "🛠️", label: "Kelola Layanan" },
+      ]
+      : []),
   ];
 
   return (
@@ -674,11 +898,11 @@ const AdminDashboard = () => {
             <div style={{ fontSize: 12, color: "#5A6E8C" }}>
               {mounted
                 ? new Date().toLocaleDateString("id-ID", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
                 : ""}
             </div>
             <button
@@ -742,6 +966,82 @@ const AdminDashboard = () => {
                     label="Resolved"
                     color="#15803D"
                     bg="#DCFCE7"
+                  />
+                </div>
+
+                {/* Sentimen Filter Settings */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3,1fr)",
+                    gap: 12,
+                    marginBottom: 20,
+                  }}
+                >
+                  <StatCard
+                    icon="😊"
+                    value={sentimentStats.Positif}
+                    label="Positif"
+                    color="#15803D"
+                    bg="#DCFCE7"
+                    onClick={() => setFilterSentiment(prev => prev === "Positif" ? "all" : "Positif")}
+                    isActive={filterSentiment === "Positif"}
+                  />
+                  <StatCard
+                    icon="😐"
+                    value={sentimentStats.Netral}
+                    label="Netral"
+                    color="#475569"
+                    bg="#F1F5F9"
+                    onClick={() => setFilterSentiment(prev => prev === "Netral" ? "all" : "Netral")}
+                    isActive={filterSentiment === "Netral"}
+                  />
+                  <StatCard
+                    icon="😡"
+                    value={sentimentStats.Negatif}
+                    label="Negatif"
+                    color="#C0272D"
+                    bg="#FEF2F2"
+                    onClick={() => setFilterSentiment(prev => prev === "Negatif" ? "all" : "Negatif")}
+                    isActive={filterSentiment === "Negatif"}
+                  />
+                </div>
+
+                {/* Kategori Filter Settings */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3,1fr)",
+                    gap: 12,
+                    marginBottom: 20,
+                  }}
+                >
+                  <StatCard
+                    icon="🔴"
+                    value={categoryStats.Kritik}
+                    label="Kritik"
+                    color="#B91C1C"
+                    bg="#FEE2E2"
+                    onClick={() => setFilterCategory(prev => prev === "Kritik" ? "all" : "Kritik")}
+                    isActive={filterCategory === "Kritik"}
+                  />
+                  <StatCard
+                    icon="💡"
+                    value={categoryStats.Saran}
+                    label="Saran"
+                    color="#B45309"
+                    bg="#FEF3C7"
+                    onClick={() => setFilterCategory(prev => prev === "Saran" ? "all" : "Saran")}
+                    isActive={filterCategory === "Saran"}
+                  />
+                  <StatCard
+                    icon="💬"
+                    value={categoryStats.Komentar}
+                    label="Komentar"
+                    color="#1D4ED8"
+                    bg="#DBEAFE"
+                    onClick={() => setFilterCategory(prev => prev === "Komentar" ? "all" : "Komentar")}
+                    isActive={filterCategory === "Komentar"}
                   />
                 </div>
 
@@ -1069,6 +1369,49 @@ const AdminDashboard = () => {
                           </div>
                         </div>
 
+                        {/* Attachment */}
+                        {t.attachments && t.attachments.length > 0 && (
+                          <div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: "#5A6E8C",
+                                marginBottom: 6,
+                                textTransform: "uppercase",
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              Lampiran
+                            </div>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              {t.attachments.map((att) => (
+                                <a
+                                  key={att.id}
+                                  href={att.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    padding: "8px 12px",
+                                    borderRadius: 8,
+                                    background: "#F8FAFF",
+                                    border: "1px solid #C8D8EE",
+                                    textDecoration: "none",
+                                    fontSize: 12,
+                                    color: "#1A3A8F",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  📎 {att.filename}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Badges */}
                         <div
                           style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
@@ -1080,57 +1423,87 @@ const AdminDashboard = () => {
 
                         {/* ── Ganti Status (Admin Layanan only) */}
                         {!isGeneral ? (
-                          <div>
-                            <div
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 800,
-                                color: "#5A6E8C",
-                                marginBottom: 8,
-                                textTransform: "uppercase",
-                                letterSpacing: 0.5,
-                              }}
-                            >
-                              Ubah Status
+                          t.status === "Returned" ? (
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  color: "#5A6E8C",
+                                  marginBottom: 8,
+                                  textTransform: "uppercase",
+                                  letterSpacing: 0.5,
+                                }}
+                              >
+                                Status Tindakan
+                              </div>
+                              <div style={{ fontSize: 13, color: "#C0272D", fontWeight: 600, background: "#FEF2F2", padding: "10px 14px", borderRadius: 8, border: "1px solid #FECACA" }}>
+                                ⚠️ Tiket dikembalikan. Tindakan lebih lanjut menunggu respon Admin General.
+                              </div>
                             </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: 8,
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              {STATUS_LIST.map((s) => {
-                                const sm = STATUS_MAP[s];
-                                const active = t.status === s;
-                                return (
-                                  <button
-                                    key={s}
-                                    onClick={() => updateStatus(t.id, s)}
-                                    style={{
-                                      padding: "6px 14px",
-                                      borderRadius: 8,
-                                      cursor: "pointer",
-                                      fontFamily: "inherit",
-                                      fontSize: 12,
-                                      fontWeight: 700,
-                                      border: active
-                                        ? `2px solid ${sm.color}`
-                                        : "1.5px solid #C8D8EE",
-                                      background: active ? sm.bg : "#fff",
-                                      color: active ? sm.color : "#5A6E8C",
-                                      boxShadow: active
-                                        ? `0 0 0 3px ${sm.bg}`
-                                        : "none",
-                                      transition: "all 0.15s",
-                                    }}
-                                  >
-                                    {sm.icon} {s}
-                                  </button>
-                                );
-                              })}
+                          ) : (
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  color: "#5A6E8C",
+                                  marginBottom: 8,
+                                  textTransform: "uppercase",
+                                  letterSpacing: 0.5,
+                                }}
+                              >
+                                Ubah Status
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: 8,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                {STATUS_LIST.map((s) => {
+                                  const sm = STATUS_MAP[s];
+                                  const active = t.status === s;
+                                  return (
+                                    <button
+                                      key={s}
+                                      onClick={() => updateStatus(t.id, s)}
+                                      disabled={loadingStatus !== null}
+                                      style={{
+                                        padding: "6px 14px",
+                                        borderRadius: 8,
+                                        cursor: loadingStatus !== null ? "not-allowed" : "pointer",
+                                        opacity: loadingStatus !== null && loadingStatus !== `${t.id}-${s}` ? 0.6 : 1,
+                                        fontFamily: "inherit",
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        border: active
+                                          ? `2px solid ${sm.color}`
+                                          : "1.5px solid #C8D8EE",
+                                        background: active ? sm.bg : "#fff",
+                                        color: active ? sm.color : "#5A6E8C",
+                                        boxShadow: active
+                                          ? `0 0 0 3px ${sm.bg}`
+                                          : "none",
+                                        transition: "all 0.15s",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                      }}
+                                    >
+                                      {loadingStatus === `${t.id}-${s}` ? (
+                                        <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
+                                      ) : (
+                                        sm.icon
+                                      )}
+                                      <span>{s}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
+                          )
                         ) : (
                           <div
                             style={{
@@ -1151,8 +1524,8 @@ const AdminDashboard = () => {
                         {/* ── History Status */}
                         {(() => {
                           const history =
-                            t.statusHistories?.filter(
-                              (h) => h.ticketId === t.id,
+                            t.ticketAuditLogs?.filter(
+                              (h) => h.ticketId === t.id && h.type === "STATUS_CHANGED",
                             ) || [];
                           if (history.length === 0) return null;
                           return (
@@ -1177,7 +1550,7 @@ const AdminDashboard = () => {
                                 }}
                               >
                                 {history.map((h, i) => {
-                                  const mappedStatus = mapToUIStatus(h.status);
+                                  const mappedStatus = mapToUIStatus(h.toValue);
                                   const sm = STATUS_MAP[mappedStatus];
 
                                   return (
@@ -1202,15 +1575,15 @@ const AdminDashboard = () => {
                                         <span
                                           style={{
                                             fontWeight: 700,
-                                            color: sm.color,
+                                            color: sm?.color || "#475569",
                                           }}
                                         >
-                                          {h.status}
+                                          {mappedStatus}
                                         </span>
 
                                         <span style={{ color: "#5A6E8C" }}>
                                           {" "}
-                                          · {h.changedBy?.name || "System"}
+                                          · {h.actor?.name || "System"}
                                         </span>
                                       </div>
 
@@ -1335,14 +1708,14 @@ const AdminDashboard = () => {
                                                 : "none",
                                             }}
                                             onMouseEnter={(e) =>
-                                              (e.currentTarget.style.background =
-                                                "#F0F5FB")
+                                            (e.currentTarget.style.background =
+                                              "#F0F5FB")
                                             }
                                             onMouseLeave={(e) =>
-                                              (e.currentTarget.style.background =
-                                                isSelected
-                                                  ? "#E0F2FE"
-                                                  : "transparent")
+                                            (e.currentTarget.style.background =
+                                              isSelected
+                                                ? "#E0F2FE"
+                                                : "transparent")
                                             }
                                           >
                                             👤 {a.name}
@@ -1817,7 +2190,7 @@ const AdminDashboard = () => {
           )}
 
           {/* ── TAB: KELOLA ADMIN (Admin General only) ─────────────── */}
-          {activeTab === "users" && isGeneral && (
+          {activeTab === "users" && isSuper && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div
                 style={{
@@ -1831,6 +2204,18 @@ const AdminDashboard = () => {
                   Daftar akun admin yang terdaftar di sistem
                 </div>
                 <button
+                  onClick={() => {
+                    setEditingAdmin(null);
+                    setAdminForm({
+                      name: "",
+                      username: "",
+                      email: "",
+                      password: "",
+                      role: "SERVICE_ADMIN",
+                      serviceIds: [],
+                    });
+                    setShowAdminModal(true);
+                  }}
                   style={{
                     padding: "8px 18px",
                     borderRadius: 9,
@@ -1847,7 +2232,9 @@ const AdminDashboard = () => {
                 </button>
               </div>
               {admins
-                .filter((a) => a.role === "SERVICE_ADMIN")
+                .filter(
+                  (a) => a.role === "SERVICE_ADMIN" || a.role === "GENERAL_ADMIN",
+                )
                 .map((a) => {
                   const ticketCount = tickets.filter(
                     (t) => t.assignedToId === a.id,
@@ -1864,6 +2251,7 @@ const AdminDashboard = () => {
                         alignItems: "center",
                         gap: 16,
                         boxShadow: "0 1px 8px rgba(26,58,143,0.05)",
+                        opacity: a.isActive ? 1 : 0.6,
                       }}
                     >
                       <div
@@ -1879,7 +2267,7 @@ const AdminDashboard = () => {
                           flexShrink: 0,
                         }}
                       >
-                        🛠️ {/*  sementara */}
+                        {a.role === "GENERAL_ADMIN" ? "⚖️" : "🛠️"}
                       </div>
                       <div style={{ flex: 1 }}>
                         <div
@@ -1889,10 +2277,18 @@ const AdminDashboard = () => {
                             color: "#0F1F4B",
                           }}
                         >
-                          {a.name}
+                          {a.name}{" "}
+                          {!a.isActive && (
+                            <span style={{ color: "#C0272D", fontSize: 10 }}>
+                              (Nonaktif)
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: 12, color: "#5A6E8C" }}>
-                          Admin Layanan ·{" "}
+                          {a.role === "GENERAL_ADMIN"
+                            ? "Admin General"
+                            : "Admin Layanan"}
+                          {" · "}
                           {a.assignedServices?.map((s) => s.name).join(", ") ||
                             "-"}
                         </div>
@@ -1909,28 +2305,929 @@ const AdminDashboard = () => {
                       >
                         {ticketCount} tiket ditangani
                       </div>
-                      <button
-                        style={{
-                          padding: "6px 14px",
-                          borderRadius: 8,
-                          border: "1.5px solid #C8D8EE",
-                          background: "#fff",
-                          color: "#5A6E8C",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          onClick={() => {
+                            setEditingAdmin(a);
+                            setAdminForm({
+                              name: a.name,
+                              username: a.username,
+                              email: a.email || "",
+                              password: "", // password empty on edit
+                              role: a.role,
+                              serviceIds: a.assignedServices?.map((s) => s.id) || [],
+                            });
+                            setShowAdminModal(true);
+                          }}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 8,
+                            border: "1.5px solid #C8D8EE",
+                            background: "#fff",
+                            color: "#5A6E8C",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          Edit
+                        </button>
+                        {a.isActive && (
+                          <button
+                            onClick={() => handleDeleteAdmin(a.id, a.name)}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 8,
+                              border: "1.5px solid #FECACA",
+                              background: "#FEF2F2",
+                              color: "#C0272D",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            Nonaktifkan
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
             </div>
           )}
+
+          {/* ── TAB: KELOLA LAYANAN (Super Admin only) ─────────────── */}
+          {activeTab === "services" && isSuper && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <div style={{ fontSize: 14, color: "#5A6E8C" }}>
+                  Daftar layanan yang tersedia di sistem
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingService(null);
+                    setServiceForm({
+                      name: "",
+                      description: "",
+                      icon: "🛠️",
+                      color: "#1A3A8F",
+                      bgColor: "#E8EEF8",
+                      requiresManualAssignment: false,
+                      assignedAdminId: "",
+                    });
+                    setShowServiceModal(true);
+                  }}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: 9,
+                    border: "none",
+                    background: "linear-gradient(135deg, #1A3A8F, #1E50A2)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  + Tambah Layanan
+                </button>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                  gap: 16,
+                }}
+              >
+                {services.map((s) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      background: "#fff",
+                      borderRadius: 14,
+                      padding: "20px",
+                      border: `1.5px solid ${s.isActive ? "#C8D8EE" : "#FEE2E2"}`,
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                      opacity: s.isActive ? 1 : 0.7,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          background: s.bgColor || "#E8EEF8",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 22,
+                        }}
+                      >
+                        {s.icon || "🛠️"}
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          onClick={() => {
+                            setEditingService(s);
+                            setServiceForm({
+                              name: s.name,
+                              description: s.description || "",
+                              icon: s.icon || "🛠️",
+                              color: s.color || "#1A3A8F",
+                              bgColor: s.bgColor || "#E8EEF8",
+                              requiresManualAssignment:
+                                s.requiresManualAssignment,
+                              assignedAdminId: s.assignedAdminId || "",
+                            });
+                            setShowServiceModal(true);
+                          }}
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 6,
+                            border: "1px solid #C8D8EE",
+                            background: "#fff",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            color: "#1A3A8F",
+                          }}
+                        >
+                          Edit
+                        </button>
+                        {s.isActive && (
+                          <button
+                            onClick={() => handleDeleteService(s.id, s.name)}
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: 6,
+                              border: "1px solid #FECACA",
+                              background: "#FEF2F2",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              color: "#C0272D",
+                            }}
+                          >
+                            Nonaktifkan
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          fontSize: 16,
+                          color: "#1A3A8F",
+                        }}
+                      >
+                        {s.name}{" "}
+                        {!s.isActive && (
+                          <span style={{ color: "#C0272D", fontSize: 10 }}>
+                            (Nonaktif)
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#5A6E8C",
+                          marginTop: 4,
+                        }}
+                      >
+                        {s.description || "Tidak ada deskripsi"}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        paddingTop: 12,
+                        borderTop: "1px solid #F0F5FB",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div style={{ fontSize: 11, color: "#5A6E8C" }}>
+                        Admin:{" "}
+                        <span style={{ fontWeight: 700, color: "#0F1F4B" }}>
+                          {s.assignedAdmin?.name || "-"}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11, color: "#5A6E8C" }}>
+                        {s._count?.tickets || 0} Tiket
+                      </div>
+                    </div>
+
+                    {s.requiresManualAssignment && (
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: "#92400E",
+                          background: "#FFFBEB",
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          alignSelf: "flex-start",
+                        }}
+                      >
+                        ⚠️ Manual Assignment
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Service Modal */}
+      {showServiceModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,31,75,0.6)",
+            backdropFilter: "blur(4px)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              width: "100%",
+              maxWidth: 500,
+              borderRadius: 20,
+              overflow: "hidden",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              animation: "fadeIn 0.2s ease-out",
+            }}
+          >
+            <div
+              style={{
+                padding: "20px 24px",
+                background: "linear-gradient(135deg, #1A3A8F, #1E50A2)",
+                color: "#fff",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ fontWeight: 800, fontSize: 18 }}>
+                {editingService ? "Edit Layanan" : "Tambah Layanan Baru"}
+              </div>
+              <button
+                onClick={() => setShowServiceModal(false)}
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                  border: "none",
+                  color: "#fff",
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveService} style={{ padding: 24 }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#5A6E8C",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Nama Layanan *
+                  </label>
+                  <input
+                    required
+                    value={serviceForm.name}
+                    onChange={(e) =>
+                      setServiceForm({ ...serviceForm, name: e.target.value })
+                    }
+                    placeholder="Contoh: Layanan IT"
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1.5px solid #C8D8EE",
+                      outline: "none",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#5A6E8C",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Deskripsi
+                  </label>
+                  <textarea
+                    value={serviceForm.description}
+                    onChange={(e) =>
+                      setServiceForm({
+                        ...serviceForm,
+                        description: e.target.value,
+                      })
+                    }
+                    placeholder="Jelaskan cakupan layanan ini..."
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1.5px solid #C8D8EE",
+                      outline: "none",
+                      fontFamily: "inherit",
+                      minHeight: 80,
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#5A6E8C",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Icon (Emoji)
+                    </label>
+                    <input
+                      value={serviceForm.icon}
+                      onChange={(e) =>
+                        setServiceForm({ ...serviceForm, icon: e.target.value })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1.5px solid #C8D8EE",
+                        outline: "none",
+                        fontFamily: "inherit",
+                        textAlign: "center",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#5A6E8C",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Admin Penanggung Jawab
+                    </label>
+                    <select
+                      value={serviceForm.assignedAdminId}
+                      onChange={(e) =>
+                        setServiceForm({
+                          ...serviceForm,
+                          assignedAdminId: e.target.value,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1.5px solid #C8D8EE",
+                        outline: "none",
+                        fontFamily: "inherit",
+                        background: "#fff",
+                      }}
+                    >
+                      <option value="">Pilih Admin (Opsional)</option>
+                      {admins.map((admin) => (
+                        <option key={admin.id} value={admin.id}>
+                          {admin.name} ({admin.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div
+                  style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#5A6E8C",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Warna Icon (Hex)
+                    </label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        value={serviceForm.color}
+                        onChange={(e) =>
+                          setServiceForm({ ...serviceForm, color: e.target.value })
+                        }
+                        placeholder="#1A3A8F"
+                        style={{
+                          flex: 1,
+                          padding: "10px 14px",
+                          borderRadius: 10,
+                          border: "1.5px solid #C8D8EE",
+                          outline: "none",
+                          fontFamily: "inherit",
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 10,
+                          background: serviceForm.color,
+                          border: "1.5px solid #C8D8EE",
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#5A6E8C",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Warna Background (Hex)
+                    </label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        value={serviceForm.bgColor}
+                        onChange={(e) =>
+                          setServiceForm({
+                            ...serviceForm,
+                            bgColor: e.target.value,
+                          })
+                        }
+                        placeholder="#E8EEF8"
+                        style={{
+                          flex: 1,
+                          padding: "10px 14px",
+                          borderRadius: 10,
+                          border: "1.5px solid #C8D8EE",
+                          outline: "none",
+                          fontFamily: "inherit",
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 10,
+                          background: serviceForm.bgColor,
+                          border: "1.5px solid #C8D8EE",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    id="manualAssign"
+                    checked={serviceForm.requiresManualAssignment}
+                    onChange={(e) =>
+                      setServiceForm({
+                        ...serviceForm,
+                        requiresManualAssignment: e.target.checked,
+                      })
+                    }
+                  />
+                  <label
+                    htmlFor="manualAssign"
+                    style={{ fontSize: 13, fontWeight: 600, color: "#0F1F4B" }}
+                  >
+                    Butuh penugasan manual oleh admin general
+                  </label>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: 24,
+                  display: "flex",
+                  gap: 12,
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowServiceModal(false)}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: 10,
+                    border: "1.5px solid #C8D8EE",
+                    background: "#fff",
+                    color: "#5A6E8C",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: "10px 24px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: "linear-gradient(135deg, #1A3A8F, #1E50A2)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {editingService ? "Simpan Perubahan" : "Tambah Layanan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Management Modal */}
+      {showAdminModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,31,75,0.6)",
+            backdropFilter: "blur(4px)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              width: "100%",
+              maxWidth: 500,
+              borderRadius: 20,
+              overflow: "hidden",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              animation: "fadeIn 0.2s ease-out",
+            }}
+          >
+            <div
+              style={{
+                padding: "20px 24px",
+                background: "linear-gradient(135deg, #1A3A8F, #1E50A2)",
+                color: "#fff",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ fontWeight: 800, fontSize: 18 }}>
+                {editingAdmin ? "Edit Akun Admin" : "Tambah Admin Baru"}
+              </div>
+              <button
+                onClick={() => setShowAdminModal(false)}
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                  border: "none",
+                  color: "#fff",
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdmin} style={{ padding: 24 }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#5A6E8C",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Nama Lengkap *
+                  </label>
+                  <input
+                    required
+                    value={adminForm.name}
+                    onChange={(e) =>
+                      setAdminForm({ ...adminForm, name: e.target.value })
+                    }
+                    placeholder="Nama Admin"
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1.5px solid #C8D8EE",
+                      outline: "none",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#5A6E8C",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Username *
+                    </label>
+                    <input
+                      required
+                      value={adminForm.username}
+                      onChange={(e) =>
+                        setAdminForm({ ...adminForm, username: e.target.value })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1.5px solid #C8D8EE",
+                        outline: "none",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#5A6E8C",
+                        marginBottom: 6,
+                      }}
+                    >
+                      {editingAdmin ? "Password (Kosongkan jika tetap)" : "Password *"}
+                    </label>
+                    <input
+                      type="password"
+                      required={!editingAdmin}
+                      value={adminForm.password}
+                      onChange={(e) =>
+                        setAdminForm({ ...adminForm, password: e.target.value })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1.5px solid #C8D8EE",
+                        outline: "none",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#5A6E8C",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Email (Opsional)
+                  </label>
+                  <input
+                    type="email"
+                    value={adminForm.email}
+                    onChange={(e) =>
+                      setAdminForm({ ...adminForm, email: e.target.value })
+                    }
+                    placeholder="email@komdigi.go.id"
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1.5px solid #C8D8EE",
+                      outline: "none",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#5A6E8C",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Role Admin *
+                  </label>
+                  <select
+                    required
+                    value={adminForm.role}
+                    onChange={(e) =>
+                      setAdminForm({ ...adminForm, role: e.target.value })
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1.5px solid #C8D8EE",
+                      outline: "none",
+                      fontFamily: "inherit",
+                      background: "#fff",
+                    }}
+                  >
+                    <option value="SERVICE_ADMIN">Admin Layanan</option>
+                    <option value="GENERAL_ADMIN">Admin General</option>
+                  </select>
+                </div>
+
+                {adminForm.role === "SERVICE_ADMIN" && (
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#5A6E8C",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Pilih Layanan yang Ditangani
+                    </label>
+                    <div
+                      style={{
+                        maxHeight: 120,
+                        overflowY: "auto",
+                        border: "1.5px solid #C8D8EE",
+                        borderRadius: 10,
+                        padding: "10px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      {services.map((srv) => (
+                        <label
+                          key={srv.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            fontSize: 13,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={adminForm.serviceIds.includes(srv.id)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setAdminForm((prev) => ({
+                                ...prev,
+                                serviceIds: checked
+                                  ? [...prev.serviceIds, srv.id]
+                                  : prev.serviceIds.filter((id) => id !== srv.id),
+                              }));
+                            }}
+                          />
+                          {srv.icon} {srv.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 24,
+                  display: "flex",
+                  gap: 12,
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowAdminModal(false)}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: 10,
+                    border: "1.5px solid #C8D8EE",
+                    background: "#fff",
+                    color: "#5A6E8C",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: "10px 24px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: "linear-gradient(135deg, #1A3A8F, #1E50A2)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {editingAdmin ? "Simpan Perubahan" : "Tambah Admin"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Toast notification */}
       {toast && (
@@ -1970,6 +3267,93 @@ const AdminDashboard = () => {
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmDelete.show && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,31,75,0.6)",
+            backdropFilter: "blur(4px)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              width: "100%",
+              maxWidth: 400,
+              borderRadius: 20,
+              padding: "24px",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              animation: "fadeIn 0.2s ease-out",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                background: "#FEF2F2",
+                color: "#C0272D",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 28,
+                margin: "0 auto 16px",
+              }}
+            >
+              ⚠️
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0F1F4B", margin: "0 0 8px" }}>
+              Konfirmasi Penonaktifan
+            </h3>
+            <p style={{ fontSize: 14, color: "#5A6E8C", margin: "0 0 24px", lineHeight: 1.5 }}>
+              Apakah Anda yakin ingin menonaktifkan <strong>{confirmDelete.name}</strong>? Data tidak akan dihapus, namun akses dan fungsinya akan dihentikan.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button
+                onClick={() => setConfirmDelete({ show: false, type: "", id: null, name: "" })}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: "1.5px solid #C8D8EE",
+                  background: "#fff",
+                  color: "#5A6E8C",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  flex: 1,
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={executeSoftDelete}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "#C0272D",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  flex: 1,
+                }}
+              >
+                Nonaktifkan
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

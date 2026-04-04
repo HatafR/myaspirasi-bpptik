@@ -11,10 +11,12 @@ export async function POST(req) {
       },
       include: {
         service: true,
-        statusHistories: {
+        attachments: true,
+        ticketAuditLogs: {
           orderBy: {
             createdAt: "desc",
           },
+          include: { actor: true },
         },
       },
     });

@@ -39,9 +39,23 @@ export async function createTicket(data) {
       sentiment: ai.sentimen.toUpperCase(),
       category: ai.kategori.toUpperCase(),
       aiSource: ai.source,
+      ...(data.attachment && {
+        attachments: {
+          create: [
+            {
+              url: data.attachment.url,
+              key: data.attachment.key,
+              filename: data.attachment.filename,
+              mimeType: data.attachment.mimeType,
+              size: data.attachment.size,
+            },
+          ],
+        },
+      }),
     },
     include: {
       service: true,
+      attachments: true,
     },
   });
 

@@ -49,8 +49,10 @@ export async function GET(req) {
         assignedTo: true,
         response: true,
         rating: true,
-        statusHistories: {
+        attachments: true,
+        ticketAuditLogs: {
           orderBy: { createdAt: "desc" },
+          include: { actor: true }
         },
       },
       orderBy: { createdAt: "desc" },

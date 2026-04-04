@@ -617,6 +617,46 @@ const TrackPage = () => {
                   {result.message}
                 </div>
               </div>
+
+              {result.attachments && result.attachments.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#5A6E8C",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Lampiran
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {result.attachments.map((att) => (
+                      <a
+                        key={att.id}
+                        href={att.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          background: "#F0F5FB",
+                          border: "1px solid #C8D8EE",
+                          textDecoration: "none",
+                          fontSize: 12,
+                          color: "#1A3A8F",
+                          fontWeight: 600,
+                        }}
+                      >
+                        📎 {att.filename}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Tanggapan User Section */}

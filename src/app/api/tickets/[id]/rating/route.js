@@ -87,11 +87,23 @@ export async function POST(req, { params }) {
         },
       });
 
-      await tx.ticketStatusHistory.create({
+      if (ticket.status !== "CLOSED") {
+        await tx.ticketAuditLog.create({
+          data: {
+            ticketId: ticket.id,
+            type: "STATUS_CHANGED",
+            fromValue: ticket.status,
+            toValue: "CLOSED",
+            actorId: null,
+          },
+        });
+      }
+
+      await tx.ticketAuditLog.create({
         data: {
           ticketId: ticket.id,
-          status: "CLOSED",
-          changedById: null,
+          type: "RATING_GIVEN",
+          metadata: { score: parsedRating, comment },
         },
       });
 

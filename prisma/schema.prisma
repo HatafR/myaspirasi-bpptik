@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  engineType = "library"
 }
 
 datasource db {
@@ -68,7 +69,7 @@ model User {
   statusChanges    TicketStatusHistory[]
   auditLogs        AuditLog[]
   replies          AdminReply[]
-  actorId          TicketAuditLog[]
+  actorAuditLogs   TicketAuditLog[]
 }
 
 model Service {
@@ -124,7 +125,7 @@ model Ticket {
   rating          Rating?
   response        TicketResponse?
   replies         AdminReply[]
-  ticketId        TicketAuditLog[]
+  ticketAuditLogs TicketAuditLog[]
   attachments     Attachment[]
 }
 

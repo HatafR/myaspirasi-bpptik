@@ -1,10 +1,9 @@
-import { transporter } from "@/lib/mailer.js";
+import { sendMail } from "@/lib/mailer.js";
 
 const ADMIN_GENERAL_EMAIL = process.env.ADMIN_GENERAL_EMAIL;
 
 async function send({ to, cc = [], subject, html }) {
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
+  await sendMail({
     to,
     cc,
     subject,

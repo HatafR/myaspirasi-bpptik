@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from "@/lib/auth";
 import { AppError } from "@/lib/error";
 import { sendTicketResolvedEmail } from "@/lib/mailer";
 
-const STATUS = ["SUBMITTED", "ASSIGNED", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+const STATUS = ["SUBMITTED", "ASSIGNED", "IN_PROGRESS", "RETURNED", "RESOLVED", "CLOSED"];
 
 const statusHandlers = {
   RESOLVED: sendTicketResolvedEmail,
@@ -28,8 +28,10 @@ export async function GET(req, { params }) {
         replies: {
           orderBy: { createdAt: "asc" },
         },
-        statusHistories: {
+        attachments: true,
+        ticketAuditLogs: {
           orderBy: { createdAt: "desc" },
+          include: { actor: true },
         },
       },
     });

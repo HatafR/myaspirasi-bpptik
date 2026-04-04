@@ -1,18 +1,13 @@
 import "dotenv/config";
-import pkg from "@prisma/client";
+import { PrismaClient, UserRole } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcrypt";
-import { UserRole } from "@prisma/client";
 
-const { PrismaClient } = pkg;
-
-const connectionString = process.env.DATABASE_URL;
-
-const adapter = new PrismaPg({ connectionString });
-
-const prisma = new PrismaClient({
-  adapter,
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
 });
+
+const prisma = new PrismaClient({ adapter });
 
 const hashedPasswordSuper = await bcrypt.hash("super123", 10);
 const hashedPasswordIt = await bcrypt.hash("it123", 10);

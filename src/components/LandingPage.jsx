@@ -153,6 +153,25 @@ const LandingPage = () => {
     setSubmitting(true);
 
     try {
+      let uploadedFile = null;
+      if (attachment) {
+        const formData = new FormData();
+        formData.append("file", attachment);
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        const uploadData = await uploadRes.json();
+        
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.message || "Gagal mengunggah file. Silakan coba lagi.");
+        }
+        
+        uploadedFile = uploadData.data;
+      }
+
       const res = await fetch("/api/tickets", {
         method: "POST",
         headers: {
@@ -165,6 +184,7 @@ const LandingPage = () => {
           subject: subject.trim(),
           message: message.trim(),
           captchaToken,
+          ...(uploadedFile && { attachment: uploadedFile }),
         }),
       });
 
@@ -1035,7 +1055,7 @@ const LandingPage = () => {
               color: "var(--gray)",
             }}
           >
-            © 2026 BPT BPT Komdigi · Kementerian Komunikasi dan Digital Republik
+            © 2026 BPT Komdigi · Kementerian Komunikasi dan Digital Republik
             Indonesia
           </div>
         </div>
