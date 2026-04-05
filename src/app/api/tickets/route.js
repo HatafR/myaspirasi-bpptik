@@ -47,7 +47,6 @@ export async function GET(req) {
       include: {
         service: true,
         assignedTo: true,
-        response: true,
         rating: true,
         attachments: true,
         ticketAuditLogs: {

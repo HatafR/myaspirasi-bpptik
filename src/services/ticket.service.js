@@ -13,8 +13,6 @@ export async function createTicket(data) {
     throw new Error("Service not found");
   }
 
-  const ai = await analyzeTextAI(data.message);
-
   const assignedToId = service.requiresManualAssignment
     ? null
     : service.assignedAdminId;
@@ -36,9 +34,10 @@ export async function createTicket(data) {
       serviceId: data.serviceId,
       assignedToId,
       status,
-      sentiment: ai.sentimen.toUpperCase(),
-      category: ai.kategori.toUpperCase(),
-      aiSource: ai.source,
+      // Default placeholder until AI processes it
+      sentiment: "NETRAL",
+      category: "KOMENTAR",
+      aiSource: "PENDING",
       ...(data.attachment && {
         attachments: {
           create: [
@@ -101,80 +100,99 @@ export async function createTicket(data) {
   }
 
   // ======================
-  // EMAIL + LOG
+  // ASYNC TASKS: AI + EMAIL
   // ======================
-  let notificationSent = false;
-
-  // Kirim email ke pengirim
-  try {
-    await sendTicketCreatedEmail(ticket.email, ticket);
-  } catch (error) {
-    console.error("Failed to send ticket created email:", error.message);
-    // Jika gagal kirim ke pengirim, log failed tapi tidak kirim error email
-    await prisma.notificationLog.create({
-      data: {
-        ticketId: ticket.id,
-        email: ticket.email,
-        type: "SUBMITTED",
-        subject: "Tiket Anda berhasil dibuat",
-        status: "failed",
-        errorMessage: error.message,
-      },
-    });
-    return ticket; // Early return jika gagal kirim ke pengirim
-  }
-
-  // Kirim notifikasi ke admin
-  try {
-    if (service.requiresManualAssignment) {
-      // kirim ke admin general
-      await notificationHandlers.CREATED(ticket);
-      console.log("admin general");
-    } else {
-      // auto assign → kirim ke PIC + CC general
-      const pic = await prisma.user.findUnique({
-        where: { id: assignedToId },
-      });
-
-      if (pic?.email) {
-        await notificationHandlers.AUTO_ASSIGNED(ticket, pic.email);
-        console.log("PIC");
-      } else {
-        throw new Error("PIC email not found");
-      }
-    }
-
-    notificationSent = true;
-    await prisma.notificationLog.create({
-      data: {
-        ticketId: ticket.id,
-        email: ticket.email,
-        type: "SUBMITTED",
-        subject: "Tiket Anda berhasil dibuat",
-        status: "sent",
-        sentAt: new Date(),
-      },
-    });
-  } catch (error) {
-    console.error("Failed to send admin notification:", error.message);
-    // Kirim email error ke pengirim
+  const processAsyncTasks = async () => {
+    // 1. Jalankan AI Asynchronous
     try {
-      await sendErrorEmail(ticket.email, ticket, error.message);
-    } catch (emailError) {
-      console.error("Failed to send error email:", emailError.message);
+      const ai = await analyzeTextAI(data.message);
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: {
+          sentiment: ai.sentimen.toUpperCase(),
+          category: ai.kategori.toUpperCase(),
+          aiSource: ai.source,
+        },
+      });
+      // Update object tiketnya agar punya info dari AI yang baru diproses
+      ticket.sentiment = ai.sentimen.toUpperCase();
+      ticket.category = ai.kategori.toUpperCase();
+    } catch (aiErr) {
+      console.error("Async AI analysis failed:", aiErr.message);
     }
 
-    await prisma.notificationLog.create({
-      data: {
-        ticketId: ticket.id,
-        email: ticket.email,
-        type: "SUBMITTED",
-        subject: "Tiket Anda berhasil dibuat",
-        status: "failed",
-        errorMessage: error.message,
-      },
-    });
-  }
+    // 2. Transaksi Email
+    // Kirim email ke pengirim
+    try {
+      await sendTicketCreatedEmail(ticket.email, ticket);
+    } catch (error) {
+      console.error("Failed to send ticket created email:", error.message);
+      await prisma.notificationLog.create({
+        data: {
+          ticketId: ticket.id,
+          email: ticket.email,
+          type: "SUBMITTED",
+          subject: "Tiket Anda berhasil dibuat",
+          status: "failed",
+          errorMessage: error.message,
+        },
+      });
+      // Email ke pengirim gagal, tidak lanjut ke admin agar flow lebih aman sesuai kondisi async
+    }
+
+    // Kirim notifikasi ke admin
+    try {
+      if (service.requiresManualAssignment) {
+        await notificationHandlers.CREATED(ticket);
+        console.log("admin general");
+      } else {
+        const pic = await prisma.user.findUnique({
+          where: { id: assignedToId },
+        });
+
+        if (pic?.email) {
+          await notificationHandlers.AUTO_ASSIGNED(ticket, pic.email);
+          console.log("PIC");
+        } else {
+          throw new Error("PIC email not found");
+        }
+      }
+
+      await prisma.notificationLog.create({
+        data: {
+          ticketId: ticket.id,
+          email: ticket.email,
+          type: "SUBMITTED",
+          subject: "Tiket Anda berhasil dibuat",
+          status: "sent",
+          sentAt: new Date(),
+        },
+      });
+    } catch (error) {
+      console.error("Failed to send admin notification:", error.message);
+      try {
+        await sendErrorEmail(ticket.email, ticket, error.message);
+      } catch (emailError) {
+        console.error("Failed to send error email:", emailError.message);
+      }
+
+      await prisma.notificationLog.create({
+        data: {
+          ticketId: ticket.id,
+          email: ticket.email,
+          type: "SUBMITTED",
+          subject: "Tiket Anda berhasil dibuat",
+          status: "failed",
+          errorMessage: error.message,
+        },
+      });
+    }
+  };
+
+  // Jalankan asinkronus ("fire-and-forget")
+  processAsyncTasks().catch((err) => {
+    console.error("Unhandled processAsyncTasks error:", err);
+  });
 
   return ticket;
 }

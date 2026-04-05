@@ -138,17 +138,14 @@ export async function PATCH(req, { params }) {
         }),
       ]);
 
-      try {
-        if (isAutoAssign) {
-          await notificationHandlers.AUTO_ASSIGNED(updated, targetUser.email);
-        } else {
-          await notificationHandlers.ASSIGNED_BY_ADMIN(
-            updated,
-            targetUser.email,
-          );
-        }
-      } catch (err) {
-        console.error("EMAIL_FAILED", err);
+      if (isAutoAssign) {
+        notificationHandlers.AUTO_ASSIGNED(updated, targetUser.email).catch((err) => {
+          console.error("EMAIL_FAILED", err);
+        });
+      } else {
+        notificationHandlers.ASSIGNED_BY_ADMIN(updated, targetUser.email).catch((err) => {
+          console.error("EMAIL_FAILED", err);
+        });
       }
 
       return Response.json({
@@ -203,15 +200,16 @@ export async function PATCH(req, { params }) {
     const handler = statusHandlers[body.status];
 
     if (handler && ticket.status !== body.status) {
-      try {
-        await handler(updated.email, updated);
-        console.log("TICKET SENT");
-      } catch (err) {
-        console.error("EMAIL_FAILED", {
-          ticketId: updated.id,
-          error: err.message,
+      handler(updated.email, updated)
+        .then(() => {
+          console.log("TICKET SENT");
+        })
+        .catch((err) => {
+          console.error("EMAIL_FAILED", {
+            ticketId: updated.id,
+            error: err.message,
+          });
         });
-      }
     }
 
     return Response.json({

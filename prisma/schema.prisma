@@ -48,6 +48,8 @@ enum AuditLogType {
   ASSIGNED
   REASSIGNED
   RATING_GIVEN
+  TICKET_CREATED
+  GENERAL_ACTION
 }
 
 // ── MODELS ───────────────────────────
@@ -120,20 +122,6 @@ model Ticket {
   rating          Rating?
   ticketAuditLogs TicketAuditLog[]
   attachments     Attachment[]
-}
-
-model TicketStatusHistory {
-  id String @id @default(uuid())
-
-  ticketId String
-  ticket   Ticket @relation(fields: [ticketId], references: [id])
-
-  status TicketStatus
-
-  changedById String?
-  changedBy   User? @relation(fields: [changedById], references: [id])
-
-  createdAt DateTime @default(now())
 }
 
 model NotificationLog {
