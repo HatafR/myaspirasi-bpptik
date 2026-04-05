@@ -106,8 +106,10 @@ const LandingPage = () => {
     return message;
   };
 
+  const isDev = process.env.NODE_ENV === "development";
+
   const handleSubmit = async () => {
-    if (!captchaToken) {
+    if (!isDev && !captchaToken) {
       Swal.fire({
         icon: "warning",
         title: "Verifikasi Captcha",
@@ -183,7 +185,7 @@ const LandingPage = () => {
           serviceId: service, // 🔥 ini kunci (bukan division lagi)
           subject: subject.trim(),
           message: message.trim(),
-          captchaToken,
+          captchaToken: isDev ? "dev-token" : captchaToken,
           ...(uploadedFile && { attachment: uploadedFile }),
         }),
       });
@@ -193,8 +195,10 @@ const LandingPage = () => {
       const result = await res.json();
 
       if (!res.ok) {
-        window.grecaptcha?.reset();
-        setCaptchaToken("");
+        if (!isDev) {
+          window.grecaptcha?.reset();
+          setCaptchaToken("");
+        }
 
         const rawMessage =
           result?.message ||
@@ -520,10 +524,9 @@ const LandingPage = () => {
     };
   }
 
-  // ── Form ─────────────────────────────────────────────────────────────────────
   return (
     <>
-      <Script src="https://www.google.com/recaptcha/api.js" />
+      {!isDev && <Script src="https://www.google.com/recaptcha/api.js" />}
       <div style={bgStyle}>
         <Navbar />
         <div
@@ -1003,13 +1006,16 @@ const LandingPage = () => {
             />
           </div> */}
 
-            <div style={{ marginBottom: 18 }}>
-              <div
-                className="g-recaptcha"
-                data-sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-                data-callback="onRecaptchaSuccess"
-              ></div>
-            </div>
+            {/* reCaptcha Google */}
+            {!isDev && (
+              <div style={{ marginBottom: 18 }}>
+                <div
+                  className="g-recaptcha"
+                  data-sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                  data-callback="onRecaptchaSuccess"
+                ></div>
+              </div>
+            )}
 
             {/* Submit */}
             <button

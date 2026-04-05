@@ -13,6 +13,8 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
 
+  const isDev = process.env.NODE_ENV === "development";
+
   const handleLogin = async () => {
     if (!identifier.trim() || !password.trim()) {
       setError("Username/email dan password wajib diisi");
@@ -20,7 +22,7 @@ const LoginPage = () => {
     }
 
     // validasi captcha
-    if (!captchaToken) {
+    if (!isDev && !captchaToken) {
       setError("Silakan verifikasi captcha terlebih dahulu");
       return;
     }
@@ -38,15 +40,17 @@ const LoginPage = () => {
         body: JSON.stringify({
           identifier: identifier.trim(),
           password,
-          captchaToken,
+          captchaToken: isDev ? "dev-token" : captchaToken,
         }),
       });
 
       const result = await res.json();
 
       if (!result.success) {
-        window.grecaptcha?.reset();
-        setCaptchaToken("");
+        if (!isDev) {
+          window.grecaptcha?.reset();
+          setCaptchaToken("");
+        }
         throw new Error(result.message);
       }
 
@@ -74,7 +78,7 @@ const LoginPage = () => {
 
   return (
     <>
-      <Script src="https://www.google.com/recaptcha/api.js" />
+      {!isDev && <Script src="https://www.google.com/recaptcha/api.js" />}
 
       <div
         style={{
@@ -338,13 +342,15 @@ const LoginPage = () => {
             </div> */}
 
             {/*reCaptcha Google*/}
-            <div style={{ marginBottom: 18 }}>
-              <div
-                className="g-recaptcha"
-                data-sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-                data-callback="onRecaptchaSuccess"
-              ></div>
-            </div>
+            {process.env.NODE_ENV !== "development" && (
+              <div style={{ marginBottom: 18 }}>
+                <div
+                  className="g-recaptcha"
+                  data-sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                  data-callback="onRecaptchaSuccess"
+                ></div>
+              </div>
+            )}
 
             {/* Submit */}
             <button

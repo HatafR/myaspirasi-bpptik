@@ -85,42 +85,45 @@ export async function POST(req) {
     const body = await req.json();
 
     const { captchaToken, ...payload } = body;
+    const isDev = process.env.NODE_ENV === "development";
 
-    if (!captchaToken) {
-      return Response.json(
+    if (!isDev) {
+      if (!captchaToken) {
+        return Response.json(
+          {
+            success: false,
+            message: "Captcha wajib",
+          },
+          { status: 400 },
+        );
+      }
+
+      // verify captcha dulu
+      const verifyRes = await fetch(
+        "https://www.google.com/recaptcha/api/siteverify",
         {
-          success: false,
-          message: "Captcha wajib",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            secret: process.env.RECAPTCHA_SECRET_KEY,
+            response: captchaToken,
+          }),
         },
-        { status: 400 },
       );
-    }
 
-    // verify captcha dulu
-    const verifyRes = await fetch(
-      "https://www.google.com/recaptcha/api/siteverify",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          secret: process.env.RECAPTCHA_SECRET_KEY,
-          response: captchaToken,
-        }),
-      },
-    );
+      const data = await verifyRes.json();
 
-    const data = await verifyRes.json();
-
-    if (!data.success) {
-      return Response.json(
-        {
-          success: false,
-          message: "Captcha tidak valid",
-        },
-        { status: 400 },
-      );
+      if (!data.success) {
+        return Response.json(
+          {
+            success: false,
+            message: "Captcha tidak valid",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const parsed = ticketSchema.safeParse(payload);

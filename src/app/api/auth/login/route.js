@@ -7,29 +7,32 @@ export async function POST(req) {
     const body = await req.json();
 
     const { identifier, password, captchaToken } = body;
+    const isDev = process.env.NODE_ENV === "development";
 
-    if (!captchaToken) {
-      throw new AppError("Captcha wajib", "CAPTCHA_REQUIRED", 400);
-    }
+    if (!isDev) {
+      if (!captchaToken) {
+        throw new AppError("Captcha wajib", "CAPTCHA_REQUIRED", 400);
+      }
 
-    const verifyRes = await fetch(
-      "https://www.google.com/recaptcha/api/siteverify",
-      {
-        method: "POST",
-        headers: {
-          "Content-type": "application/x-www-form-urlencoded",
+      const verifyRes = await fetch(
+        "https://www.google.com/recaptcha/api/siteverify",
+        {
+          method: "POST",
+          headers: {
+            "Content-type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            secret: process.env.RECAPTCHA_SECRET_KEY,
+            response: captchaToken,
+          }),
         },
-        body: new URLSearchParams({
-          secret: process.env.RECAPTCHA_SECRET_KEY,
-          response: captchaToken,
-        }),
-      },
-    );
+      );
 
-    const data = await verifyRes.json();
+      const data = await verifyRes.json();
 
-    if (!data.success) {
-      throw new Error("Captcha tidak valid");
+      if (!data.success) {
+        throw new Error("Captcha tidak valid");
+      }
     }
 
     const result = await loginAdmin(identifier, password);
