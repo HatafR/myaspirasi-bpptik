@@ -31,6 +31,7 @@ const LoginPage = () => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -49,9 +50,8 @@ const LoginPage = () => {
         throw new Error(result.message);
       }
 
-      localStorage.setItem("token", result.data.token);
-      localStorage.setItem("user_session", JSON.stringify(result.data.user));
-
+      // Token tersimpan otomatis sebagai HttpOnly cookie oleh server
+      // Tidak perlu simpan ke localStorage
       router.push("/admin/dashboard");
     } catch (err) {
       setError(err.message || "Login gagal");

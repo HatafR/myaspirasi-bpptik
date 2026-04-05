@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { validateStatusTransition } from "@/lib/ticket-status";
-import { requireAuth, requireRole } from "@/lib/auth";
+import { requireAuthFromCookie, requireRole } from "@/lib/auth";
 import { AppError } from "@/lib/error";
 import { sendTicketResolvedEmail } from "@/lib/mailer";
 
@@ -15,7 +15,7 @@ const statusHandlers = {
 // ==========================
 export async function GET(req, { params }) {
   try {
-    const user = requireAuth(req);
+    const user = await requireAuthFromCookie(req);
     const { id } = params;
 
     const ticket = await prisma.ticket.findUnique({
@@ -69,7 +69,7 @@ export async function GET(req, { params }) {
 
 export async function PATCH(req, { params }) {
   try {
-    const user = requireAuth(req);
+    const user = await requireAuthFromCookie(req);
     if (!user) throw AppError("Required Login", "AUTH_INVALID", 401);
 
     const { id } = await params;

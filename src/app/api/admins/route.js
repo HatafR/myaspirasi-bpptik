@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/auth";
+import { requireAuthFromCookie, requireRole } from "@/lib/auth";
 import bcrypt from "bcrypt";
 
 export async function GET(req) {
   try {
-    const user = requireAuth(req);
+    const user = await requireAuthFromCookie(req);
     requireRole(user, ["SUPER_ADMIN", "GENERAL_ADMIN"]);
 
     const { searchParams } = new URL(req.url);
@@ -54,7 +54,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const user = requireAuth(req);
+    const user = await requireAuthFromCookie(req);
     requireRole(user, ["SUPER_ADMIN"]);
 
     const body = await req.json();

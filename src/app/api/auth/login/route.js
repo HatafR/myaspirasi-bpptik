@@ -1,5 +1,6 @@
 import { loginAdmin } from "@/services/auth.service";
 import { AppError } from "@/lib/error";
+import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
@@ -33,10 +34,23 @@ export async function POST(req) {
 
     const result = await loginAdmin(identifier, password);
 
-    return Response.json({
+    const response = NextResponse.json({
       success: true,
-      data: result,
+      data: {
+        user: result.user,
+      },
     });
+
+    // Set JWT sebagai HttpOnly cookie
+    response.cookies.set("auth_token", result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60, // 1 jam (sesuai JWT expiresIn)
+      path: "/",
+    });
+
+    return response;
   } catch (e) {
     console.error("LOGIN ERROR:", e);
 

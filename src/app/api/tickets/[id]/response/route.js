@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/auth";
+import { requireAuthFromCookie, requireRole } from "@/lib/auth";
 
 // ==========================
 // GET /api/tickets/:id/response
@@ -32,7 +32,7 @@ export async function GET(req, { params }) {
 // ==========================
 export async function POST(req, { params }) {
   try {
-    const user = requireAuth(req);
+    const user = await requireAuthFromCookie(req);
     requireRole(user, ["SERVICE_ADMIN", "SUPER_ADMIN"]);
 
     const { id } = params;

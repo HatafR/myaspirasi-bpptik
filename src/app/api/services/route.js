@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/auth";
+import { requireAuthFromCookie, requireRole } from "@/lib/auth";
 
 export async function GET(req) {
   try {
@@ -8,7 +8,7 @@ export async function GET(req) {
 
     // If requesting all (including inactive), require SUPER_ADMIN
     if (includeInactive) {
-      const user = requireAuth(req);
+      const user = await requireAuthFromCookie(req);
       requireRole(user, ["SUPER_ADMIN"]);
     }
 
@@ -43,7 +43,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const user = requireAuth(req);
+    const user = await requireAuthFromCookie(req);
     requireRole(user, ["SUPER_ADMIN"]);
 
     const body = await req.json();

@@ -1,7 +1,7 @@
 import { createTicket } from "@/services/ticket.service";
 import { ticketSchema } from "@/validations/ticket.validation";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuthFromCookie } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { redis } from "@/lib/redis";
 
@@ -13,7 +13,7 @@ const WINDOW = 60; // seconds
 // ==========================
 export async function GET(req) {
   try {
-    const user = requireAuth(req);
+    const user = await requireAuthFromCookie(req);
     const { searchParams } = new URL(req.url);
 
     const status = searchParams.get("status");

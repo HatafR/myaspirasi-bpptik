@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/auth";
+import { requireAuthFromCookie, requireRole } from "@/lib/auth";
 import bcrypt from "bcrypt";
 
 export async function PATCH(req, { params }) {
   try {
-    const user = requireAuth(req);
+    const user = await requireAuthFromCookie(req);
     requireRole(user, ["SUPER_ADMIN"]);
 
     const { id } = await params;
@@ -50,7 +50,7 @@ export async function PATCH(req, { params }) {
 
 export async function DELETE(req, { params }) {
   try {
-    const user = requireAuth(req);
+    const user = await requireAuthFromCookie(req);
     requireRole(user, ["SUPER_ADMIN"]);
 
     const { id } = await params;

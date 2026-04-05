@@ -66,9 +66,6 @@ model User {
 
   assignedServices Service[]             @relation("ServiceAdmin")
   assignedTickets  Ticket[]              @relation("AssignedTickets")
-  statusChanges    TicketStatusHistory[]
-  auditLogs        AuditLog[]
-  replies          AdminReply[]
   actorAuditLogs   TicketAuditLog[]
 }
 
@@ -120,11 +117,7 @@ model Ticket {
   closedAt  DateTime?
 
   notifications   NotificationLog[]
-  statusHistories TicketStatusHistory[]
-  auditLogs       AuditLog[]
   rating          Rating?
-  response        TicketResponse?
-  replies         AdminReply[]
   ticketAuditLogs TicketAuditLog[]
   attachments     Attachment[]
 }
@@ -161,24 +154,6 @@ model NotificationLog {
   createdAt DateTime @default(now())
 }
 
-model AuditLog {
-  id String @id @default(uuid())
-
-  ticketId String?
-  ticket   Ticket? @relation(fields: [ticketId], references: [id])
-
-  actorId String?
-  actor   User? @relation(fields: [actorId], references: [id])
-
-  action String
-  entity String
-
-  oldValue String?
-  newValue String?
-
-  createdAt DateTime @default(now())
-}
-
 model Rating {
   id       String @id @default(uuid())
   ticketId String @unique
@@ -190,45 +165,25 @@ model Rating {
   createdAt DateTime @default(now())
 }
 
-model TicketResponse {
-  id       String @id @default(uuid())
-  ticketId String @unique
-  ticket   Ticket @relation(fields: [ticketId], references: [id])
-
-  content String
-
-  createdAt DateTime @default(now())
-}
-
-model AdminReply {
-  id        String   @id @default(cuid())
-  ticketId  String
-  userId    String
-  userName  String
-  isi       String   @db.Text
-  createdAt DateTime @default(now())
-
-  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  admin  User   @relation(fields: [userId], references: [id])
-}
-
 model TicketAuditLog {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
+  
   ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket    Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
-  type      AuditLogType
+  type      AuditLogType // Menggunakan Enum agar konsisten
 
-  actorId   String?
-  actor     User?    @relation(fields: [actorId], references: [id])
+  actorId   String?      // Siapa yang melakukan perubahan (Bisa Admin/Sistem)
+  actor     User?        @relation(fields: [actorId], references: [id])
 
-  fromValue String?
-  toValue   String?
+  fromValue String?      // Nilai sebelum diubah (misal: "SUBMITTED")
+  toValue   String?      // Nilai setelah diubah (misal: "IN_PROGRESS")
 
-  metadata  Json?
+  metadata  Json?        // Simpan detail ekstra di sini jika dibutuhkan
 
-  createdAt DateTime @default(now())
+  createdAt DateTime     @default(now())
 
+  // Index agar pencarian log berdasarkan tiket atau aktor sangat cepat
   @@index([ticketId])
   @@index([type])
   @@index([actorId])

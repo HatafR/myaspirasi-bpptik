@@ -221,22 +221,28 @@ const AdminDashboard = () => {
     const load = async () => {
       setMounted(true);
 
-      const session = localStorage.getItem("user_session");
-      const token = localStorage.getItem("token");
-
-      if (!session || !token) {
-        router.push("/login");
-        return;
-      }
-
-      const u = JSON.parse(session);
-      setUser(u);
-
       try {
+        // Ambil data user dari cookie session
+        const meRes = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+
+        if (!meRes.ok) {
+          router.push("/login");
+          return;
+        }
+
+        const meResult = await meRes.json();
+        if (!meResult.success) {
+          router.push("/login");
+          return;
+        }
+
+        const u = meResult.data;
+        setUser(u);
+
         const res = await fetch("/api/tickets", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          credentials: "include",
         });
 
         const result = await res.json();
@@ -263,11 +269,7 @@ const AdminDashboard = () => {
         if (u.role === "GENERAL_ADMIN" || u.role === "SUPER_ADMIN") {
           const adminRes = await fetch(
             `/api/admins?type=all${u.role === "SUPER_ADMIN" ? "&all=true" : ""}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            },
+            { credentials: "include" },
           );
 
           const adminResult = await adminRes.json();
@@ -281,9 +283,7 @@ const AdminDashboard = () => {
 
         if (u.role === "SUPER_ADMIN") {
           const serviceRes = await fetch("/api/services?all=true", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: "include",
           });
           const serviceResult = await serviceRes.json();
           if (serviceResult.success) {
@@ -411,14 +411,13 @@ const AdminDashboard = () => {
   // ── Actions
   const updateStatus = async (ticketId, newStatus) => {
     setLoadingStatus(`${ticketId}-${newStatus}`);
-    const token = localStorage.getItem("token");
 
     try {
       const res = await fetch(`/api/tickets/${ticketId}`, {
         method: "PATCH",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           status: STATUS_TO_API[newStatus],
@@ -459,14 +458,12 @@ const AdminDashboard = () => {
   };
 
   const assignTicket = async (ticketId, adminId) => {
-    const token = localStorage.getItem("token");
-
     try {
       const res = await fetch(`/api/tickets/${ticketId}`, {
         method: "PATCH",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           assignedToId: adminId,
@@ -506,14 +503,16 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("user_session");
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
     router.push("/login");
   };
 
   const handleSaveService = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     const isEdit = !!editingService;
     const url = isEdit ? `/api/services/${editingService.id}` : "/api/services";
     const method = isEdit ? "PATCH" : "POST";
@@ -521,9 +520,9 @@ const AdminDashboard = () => {
     try {
       const res = await fetch(url, {
         method,
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(serviceForm),
       });
@@ -563,7 +562,6 @@ const AdminDashboard = () => {
 
   const handleSaveAdmin = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     const isEdit = !!editingAdmin;
     const url = isEdit ? `/api/admins/${editingAdmin.id}` : "/api/admins";
     const method = isEdit ? "PATCH" : "POST";
@@ -581,9 +579,9 @@ const AdminDashboard = () => {
     try {
       const res = await fetch(url, {
         method,
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(adminForm),
       });
@@ -616,18 +614,12 @@ const AdminDashboard = () => {
     const { type, id } = confirmDelete;
     setConfirmDelete({ show: false, type: "", id: null, name: "" });
 
-    let token = localStorage.getItem("token");
-    if (!token) {
-      const session = localStorage.getItem("user_session");
-      if (session) token = JSON.parse(session).token;
-    }
-
     try {
       const res = await fetch(`/api/${type}/${id}`, {
         method: "PATCH",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ isActive: false })
       });
@@ -905,22 +897,6 @@ const AdminDashboard = () => {
                 })
                 : ""}
             </div>
-            <button
-              onClick={() => router.push("/")}
-              style={{
-                padding: "7px 16px",
-                borderRadius: 8,
-                border: "1.5px solid #C8D8EE",
-                background: "#fff",
-                color: "#1A3A8F",
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              ← Beranda
-            </button>
           </div>
         </div>
 
