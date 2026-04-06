@@ -397,72 +397,7 @@ const LoginPage = () => {
           </div>
         </div>
 
-        {/* Dummy credentials hint */}
-        <div
-          style={{
-            marginTop: 20,
-            padding: "14px 20px",
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            borderRadius: 12,
-            maxWidth: 420,
-            width: "100%",
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: "rgba(255,255,255,0.5)",
-              letterSpacing: 1,
-              textTransform: "uppercase",
-              marginBottom: 8,
-            }}
-          >
-            Demo Credentials
-          </div>
-          {[
-            ["Admin General", "admin.general", "admin123"],
-            ["Admin IT", "admin.it", "it123"],
-            ["Admin Humas", "admin.humas", "humas123"],
-          ].map(([role, user, pass]) => (
-            <div
-              key={role}
-              style={{
-                display: "flex",
-                gap: 8,
-                marginBottom: 4,
-                fontSize: 12,
-                color: "rgba(255,255,255,0.6)",
-                alignItems: "center",
-              }}
-            >
-              <span style={{ minWidth: 100, fontWeight: 600 }}>{role}</span>
-              <span
-                style={{
-                  fontFamily: "monospace",
-                  background: "rgba(255,255,255,0.08)",
-                  padding: "1px 7px",
-                  borderRadius: 4,
-                }}
-              >
-                {user}
-              </span>
-              <span
-                style={{
-                  fontFamily: "monospace",
-                  background: "rgba(255,255,255,0.08)",
-                  padding: "1px 7px",
-                  borderRadius: 4,
-                }}
-              >
-                {pass}
-              </span>
-            </div>
-          ))}
-        </div>
+
 
         <div
           style={{
