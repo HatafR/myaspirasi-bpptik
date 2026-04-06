@@ -1,3 +1,5 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
 const VALID_SENTIMEN = ["Positif", "Netral", "Negatif"];
 const VALID_KATEGORI = ["Kritik", "Saran", "Komentar"];
 
@@ -88,7 +90,7 @@ Output Format:
 
     const raw = await res.text();
 
-    console.log(raw);
+    // console.log(raw);
 
     const data = JSON.parse(raw);
 
@@ -111,3 +113,39 @@ Output Format:
     return ruleBased(text);
   }
 }
+
+// export async function analyzeTextAI(text) {
+//   const API_KEY = process.env.GEMINI_API_KEY; // Ganti dengan key dari AI Studio
+//   if (!API_KEY) return ruleBased(text);
+
+//   const genAI = new GoogleGenerativeAI(API_KEY);
+  
+//   // Menggunakan Gemini 2.0 Flash (Tercepat dan support JSON mode dengan baik)
+//   const model = genAI.getGenerativeModel({ 
+//     model: "gemini-2.0-flash",
+//     generationConfig: {
+//       responseMimeType: "application/json", // Memaksa output JSON
+//     }
+//   });
+
+//   try {
+//     const prompt = `
+//       Analisis teks berikut: "${text}"
+//       Berikan output dalam JSON sesuai skema:
+//       {"sentimen": "Positif" | "Netral" | "Negatif", "kategori": "Kritik" | "Saran" | "Komentar"}
+//     `;
+
+//     const result = await model.generateContent(prompt);
+//     const response = await result.response;
+//     const data = JSON.parse(response.text());
+
+//     return {
+//       sentimen: VALID_SENTIMEN.includes(data.sentimen) ? data.sentimen : "Netral",
+//       kategori: VALID_KATEGORI.includes(data.kategori) ? data.kategori : "Komentar",
+//       source: "gemini-2.0-flash",
+//     };
+//   } catch (err) {
+//     console.error("Gemini Error:", err);
+//     return ruleBased(text);
+//   }
+// }

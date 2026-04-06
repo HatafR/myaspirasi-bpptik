@@ -3,20 +3,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_RECAPTCHA_SITE_KEY=${NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+        - NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
     restart: always
     ports:
       - "3000:3000"
+    env_file: .env # Use the main .env for secrets
     environment:
-      # These must map to the internal container names, not localhost
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/ticketing
+      # Mandatory overrides for the Docker ecosystem
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/ticketing?schema=public
       REDIS_URL: redis://redis:6379
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       mailpit:
         condition: service_started
 
@@ -31,6 +36,11 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ticketing"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:alpine
@@ -39,6 +49,11 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   mailpit:
     image: axllent/mailpit
@@ -55,6 +70,17 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
+
+  npm:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - '80:80'      # Pintu masuk HTTP Publik
+      - '81:81'      # Pintu masuk Dashboard Admin NPM
+      - '443:443'    # Pintu masuk HTTPS Publik
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt
 
 volumes:
   postgres_data:
