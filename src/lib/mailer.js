@@ -1,39 +1,25 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const smtpHost = process.env.SMTP_HOST || "localhost";
-const isLocal = smtpHost === "localhost" || smtpHost === "127.0.0.1";
-
-export const transporter = nodemailer.createTransport({
-  host: smtpHost,
-  port: Number(process.env.SMTP_PORT) || 1025,
-  secure: Number(process.env.SMTP_PORT) === 465, // true untuk port 465
-  ignoreTLS: isLocal,
-  ...(!isLocal && process.env.EMAIL_USER && process.env.EMAIL_PASS
-    ? {
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      }
-    : {}),
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendMail({ from, to, cc, subject, html, text }) {
-  const options = {
-    from: from || process.env.EMAIL_USER || "ticketing@bpptik.local",
-    to,
-    subject,
-  };
-  
-  if (cc && cc.length > 0) options.cc = cc;
-  
-  if (html) options.html = html;
-  if (text) options.text = text;
-
   try {
-    const info = await transporter.sendMail(options);
-    return info;
+    const { data, error } = await resend.emails.send({
+      from: from || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+      to: typeof to === "string" ? [to] : to,
+      cc,
+      subject,
+      html: html || text,
+    });
+
+    if (error) {
+      console.error("Resend Error:", error);
+      throw new Error(error.message);
+    }
+    
+    return data;
   } catch (error) {
+    console.error("Mail Error:", error);
     throw new Error(error.message);
   }
 }
