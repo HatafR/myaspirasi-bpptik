@@ -160,7 +160,7 @@ const LandingPage = () => {
         const formData = new FormData();
         formData.append("file", attachment);
 
-        const uploadRes = await fetch("/api/upload", {
+        const uploadRes = await fetch("/api/uploads", {
           method: "POST",
           body: formData,
         });
