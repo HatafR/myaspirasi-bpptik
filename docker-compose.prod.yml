@@ -73,16 +73,16 @@ services:
     ports:
       - "5050:80"
 
-  npm:
-    image: 'jc21/nginx-proxy-manager:latest'
-    restart: unless-stopped
+  nginx:
+    image: nginx:alpine
+    restart: always
     ports:
-      - '80:80'      # Pintu masuk HTTP Publik
-      - '81:81'      # Pintu masuk Dashboard Admin NPM
-      - '443:443'    # Pintu masuk HTTPS Publik
+      - "80:80" # Port ini yang akan ditembak oleh Cloudflare Tunnel
     volumes:
-      - ./npm/data:/data
-      - ./npm/letsencrypt:/etc/letsencrypt
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public/uploads:/app/public/uploads:ro # Share folder yang sama
+    depends_on:
+      - app
 
 volumes:
   postgres_data:
