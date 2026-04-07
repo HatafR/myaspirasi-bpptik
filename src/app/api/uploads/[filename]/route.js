@@ -6,39 +6,36 @@ import fs from "fs";
 export async function GET(req, { params }) {
   const { filename } = params;
   
-  // Arahkan ke folder uploads di dalam public
+  // Menentukan path absolut ke folder uploads
   const filePath = join(process.cwd(), "public", "uploads", filename);
 
-  // 1. Cek apakah file fisik ada di disk
+  // Cek apakah file benar-benar ada di folder
   if (!fs.existsSync(filePath)) {
-    return NextResponse.json({ error: "File tidak ditemukan di server" }, { status: 404 });
+    return new NextResponse("File tidak ditemukan di server", { status: 404 });
   }
 
   try {
-    // 2. Baca file secara dinamis
     const fileBuffer = await readFile(filePath);
-
-    // 3. Tentukan Content-Type sederhana berdasarkan ekstensi
+    
+    // Tentukan Content-Type berdasarkan ekstensi file
     const ext = filename.split('.').pop().toLowerCase();
     const mimeTypes = {
+      pdf: "application/pdf",
       png: "image/png",
       jpg: "image/jpeg",
       jpeg: "image/jpeg",
-      gif: "image/gif",
-      pdf: "application/pdf",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     };
-
-    const contentType = mimeTypes[ext] || "application/octet-stream";
 
     return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=31536000",
+        "Content-Type": mimeTypes[ext] || "application/octet-stream",
+        "Content-Disposition": "inline", // Agar file bisa langsung terbuka di browser
+        "Cache-Control": "no-store, max-age=0", // Mencegah caching agar file terbaru selalu terbaca
       },
     });
   } catch (error) {
-    console.error("Gagal membaca file:", error);
-    return NextResponse.json({ error: "Gagal memproses file" }, { status: 500 });
+    return new NextResponse("Gagal membaca file", { status: 500 });
   }
 }

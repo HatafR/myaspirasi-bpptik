@@ -164,13 +164,13 @@ const LandingPage = () => {
           method: "POST",
           body: formData,
         });
-        
+
         const uploadData = await uploadRes.json();
-        
+
         if (!uploadRes.ok) {
           throw new Error(uploadData.message || "Gagal mengunggah file. Silakan coba lagi.");
         }
-        
+
         uploadedFile = uploadData.data;
       }
 
@@ -718,9 +718,9 @@ const LandingPage = () => {
                 }}
                 onFocus={(e) => (e.target.style.borderColor = "#1E50A2")}
                 onBlur={(e) =>
-                  (e.target.style.borderColor = emailError
-                    ? "#C0272D"
-                    : "#C8D8EE")
+                (e.target.style.borderColor = emailError
+                  ? "#C0272D"
+                  : "#C8D8EE")
                 }
               />
               {emailError && (
@@ -976,7 +976,7 @@ const LandingPage = () => {
                 id="file-upload"
                 type="file"
                 style={{ display: "none" }}
-                accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                accept=".jpg,.jpeg,.png,.pdf"
                 onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
