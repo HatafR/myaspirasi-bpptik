@@ -77,7 +77,7 @@ export async function sendTicketResolvedEmail(email, ticket) {
         </tr>
       </table>
       <p>Silakan berikan rating dan feedback Anda dengan memasukkan nomor tiket melalui halaman berikut:</p>
-      <p><a href="https://myaspirasi-bpptik.vercel.app/track" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px;">Lacak Tiket Anda</a></p>
+      <p><a href="${process.env.NEXT_PUBLIC_BASE_URL}/track" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px;">Lacak Tiket Anda</a></p>
       <p>Terima kasih.</p>
     </div>
   `;
