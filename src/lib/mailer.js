@@ -16,7 +16,7 @@ export async function sendMail({ from, to, cc, subject, html, text }) {
       console.error("Resend Error:", error);
       throw new Error(error.message);
     }
-    
+
     return data;
   } catch (error) {
     console.error("Mail Error:", error);
@@ -44,7 +44,7 @@ export async function sendTicketCreatedEmail(email, ticket) {
         </tr>
       </table>
       <p>Simpan nomor tiket ini untuk melakukan pelacakan status tiket.</p>
-      <p><a href="https://myaspirasi-bpptik.vercel.app/track" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px;">Lacak Tiket Anda</a></p>
+      <p><a href="${process.env.NEXT_PUBLIC_BASE_URL}/track" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px;">Lacak Tiket Anda</a></p>
       <p>Terima kasih.</p>
     </div>
   `;
