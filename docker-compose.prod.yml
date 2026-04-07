@@ -25,7 +25,7 @@ services:
       mailpit:
         condition: service_started
     volumes:
-      - ./uploads:/app/public/uploads
+      - ./uploads:/public/uploads
 
   postgres:
     image: postgres:15-alpine
