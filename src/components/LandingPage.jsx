@@ -547,8 +547,10 @@ const LandingPage = () => {
               padding: "18px 24px",
               marginBottom: 24,
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent: "center",
               alignItems: "center",
+              flexWrap: "wrap",
+              gap: 12,
               boxShadow: "0 4px 24px rgba(26,58,143,0.2)",
               position: "relative",
               overflow: "hidden",
@@ -577,7 +579,7 @@ const LandingPage = () => {
                 background: "rgba(255,255,255,0.04)",
               }}
             />
-            <div>
+            <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
               <div
                 style={{
                   fontSize: 11,
@@ -588,38 +590,14 @@ const LandingPage = () => {
                   marginBottom: 6,
                 }}
               >
-                Nomor Tiket Anda
+                Tanggal & Waktu
               </div>
               <div
                 style={{
-                  fontSize: 20,
-                  fontWeight: 800,
-                  color: "#fff",
-                  fontFamily: "monospace",
-                  letterSpacing: 2,
-                }}
-              >
-                {mounted ? ticketId : "TKT-••••••••-••••"}
-              </div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "rgba(255,255,255,0.6)",
-                  fontWeight: 600,
-                  letterSpacing: 1,
-                  textTransform: "uppercase",
-                  marginBottom: 6,
-                }}
-              >
-                Tanggal
-              </div>
-              <div
-                style={{
-                  fontSize: 13,
+                  fontSize: 15,
                   color: "rgba(255,255,255,0.9)",
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  letterSpacing: 0.5,
                 }}
               >
                 {mounted ? formatDate(new Date()) : "—"}
@@ -667,7 +645,7 @@ const LandingPage = () => {
                   fontFamily: "inherit",
                   transition: "border-color 0.15s",
                 }}
-                placeholder="Nama Anda, atau kosongkan untuk anonim"
+                placeholder="Nama Anda (kosongkan jika anonim)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onFocus={(e) => (e.target.style.borderColor = "#1E50A2")}

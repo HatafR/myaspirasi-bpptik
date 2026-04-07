@@ -40,6 +40,12 @@ const Navbar = ({ ticketCount = 0 }) => {
 
   return (
     <>
+      <style>{`
+        @media (max-width: 480px) {
+          .nav-logo-text { display: none !important; }
+          .nav-pill-text { display: none !important; }
+        }
+      `}</style>
       {/* ── Navbar ───────────────────────────────────────────────────────── */}
       <nav
         style={{
@@ -161,6 +167,7 @@ const Navbar = ({ ticketCount = 0 }) => {
             </div>
             <div>
               <div
+                className="nav-logo-text"
                 style={{
                   fontWeight: 800,
                   fontSize: 17,
@@ -172,6 +179,7 @@ const Navbar = ({ ticketCount = 0 }) => {
                 MyAspirasi
               </div>
               <div
+                className="nav-logo-text"
                 style={{
                   fontSize: 10,
                   color: "rgba(255,255,255,0.6)",
@@ -205,9 +213,11 @@ const Navbar = ({ ticketCount = 0 }) => {
               }}
             >
               {mounted ? links.find((l) => l.href === pathname)?.icon : ""}{" "}
-              {mounted
-                ? links.find((l) => l.href === pathname)?.label || "MyAspirasi"
-                : "MyAspirasi"}
+              <span className="nav-pill-text">
+                {mounted
+                  ? links.find((l) => l.href === pathname)?.label || "MyAspirasi"
+                  : "MyAspirasi"}
+              </span>
             </div>
             {ticketCount > 0 && (
               <div
