@@ -247,10 +247,10 @@ const TrackPage = () => {
       setResult((prev) =>
         prev
           ? {
-              ...prev,
-              status: "CLOSED",
-              rating: data.data,
-            }
+            ...prev,
+            status: "CLOSED",
+            rating: data.data,
+          }
           : prev,
       );
       setTanggapanSent(true);
@@ -288,7 +288,7 @@ const TrackPage = () => {
               letterSpacing: 0.3,
             }}
           >
-            🔍 Lacak Status Tiket
+            Lacak Status Tiket
           </div>
           <h1
             style={{
@@ -380,7 +380,7 @@ const TrackPage = () => {
                 minWidth: 100,
               }}
             >
-              {loading ? "⏳ Mencari..." : "🔍 Lacak"}
+              {loading ? "⏳ Mencari..." : "Lacak"}
             </button>
           </div>
           {error && (

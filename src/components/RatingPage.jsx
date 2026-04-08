@@ -26,15 +26,15 @@ const STAR_COLORS = {
 
 const RatingPage = ({ ticketId }) => {
   const router = useRouter();
-  const [ticket, setTicket]       = useState(null);
-  const [notFound, setNotFound]   = useState(false);
+  const [ticket, setTicket] = useState(null);
+  const [notFound, setNotFound] = useState(false);
   const [notEligible, setNotEligible] = useState(false);
   const [alreadyRated, setAlreadyRated] = useState(false);
-  const [mounted, setMounted]     = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  const [hover, setHover]         = useState(0);
-  const [rating, setRating]       = useState(0);
-  const [comment, setComment]     = useState("");
+  const [hover, setHover] = useState(0);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -99,7 +99,7 @@ const RatingPage = ({ ticketId }) => {
           padding: "11px 24px", borderRadius: 10, border: "none",
           background: "linear-gradient(135deg, #1A3A8F, #1E50A2)",
           color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-        }}>🔍 Lacak Tiket</button>
+        }}>Lacak Tiket</button>
       </div>
     </div>
   );
@@ -175,9 +175,11 @@ const RatingPage = ({ ticketId }) => {
               {STAR_LABELS[rating]}
             </div>
             {comment && (
-              <div style={{ marginTop: 16, padding: "12px 16px", background: "#F8FAFF",
+              <div style={{
+                marginTop: 16, padding: "12px 16px", background: "#F8FAFF",
                 borderRadius: 10, border: "1px solid #C8D8EE",
-                fontSize: 13, color: "#374151", lineHeight: 1.7, textAlign: "left" }}>
+                fontSize: 13, color: "#374151", lineHeight: 1.7, textAlign: "left"
+              }}>
                 "{comment}"
               </div>
             )}
@@ -191,7 +193,7 @@ const RatingPage = ({ ticketId }) => {
                 padding: "10px 22px", borderRadius: 9,
                 border: "1.5px solid #C8D8EE", background: "#fff",
                 color: "#1A3A8F", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 13,
-              }}>🔍 Lacak Tiket</button>
+              }}>Lacak Tiket</button>
             </div>
           </div>
         </div>
@@ -234,16 +236,20 @@ const RatingPage = ({ ticketId }) => {
           boxShadow: "0 4px 20px rgba(26,58,143,0.2)",
         }}>
           <div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", fontWeight: 700,
-              letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Nomor Tiket</div>
+            <div style={{
+              fontSize: 10, color: "rgba(255,255,255,0.6)", fontWeight: 700,
+              letterSpacing: 1, textTransform: "uppercase", marginBottom: 4
+            }}>Nomor Tiket</div>
             <div style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: 1 }}>
               {ticket.id}
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 11, background: "#DCFCE7", color: "#15803D",
+            <div style={{
+              fontSize: 11, background: "#DCFCE7", color: "#15803D",
               border: "1px solid #BBF7D0", borderRadius: 999, padding: "3px 12px",
-              fontWeight: 700, marginBottom: 4 }}>
+              fontWeight: 700, marginBottom: 4
+            }}>
               {ticket.status === "Resolved" ? "🟢 Resolved" : "⚫ Closed"}
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>

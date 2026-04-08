@@ -804,7 +804,7 @@ const LandingPage = () => {
               </label>
               <textarea
                 rows={5}
-                maxLength={1000}
+                maxLength={2000}
                 placeholder="Tuliskan kritik, saran, atau komentar Anda di sini..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -830,35 +830,14 @@ const LandingPage = () => {
                   alignItems: "center",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    fontSize: 12,
-                    color: "var(--gray)",
-                  }}
-                >
-                  {["Kritik 🔴", "Saran 💡", "Komentar 💬"].map((t) => (
-                    <span
-                      key={t}
-                      style={{
-                        background: "#F1F5F9",
-                        borderRadius: 999,
-                        padding: "2px 8px",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
+
                 <span
                   style={{
                     fontSize: 12,
-                    color: message.length > 900 ? "#DC2626" : "var(--gray)",
+                    color: message.length > 1900 ? "#DC2626" : "var(--gray)",
                   }}
                 >
-                  {message.length}/1000
+                  {message.length}/2000
                 </span>
               </div>
             </div>
@@ -1024,8 +1003,8 @@ const LandingPage = () => {
               }}
             >
               {submitting
-                ? "🤖 Menganalisis & Mengirim..."
-                : "🚀 Kirim Aspirasi"}
+                ? "Menganalisis & Mengirim..."
+                : "Kirim Aspirasi"}
             </button>
           </div>
 
