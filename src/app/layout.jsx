@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "MyAspirasi — BPT Komdigi",
+  title: "BPT Komdigi MyAspirasi",
   description: "Platform aspirasi digital Balai Pelatihan Talenta Komunikasi dan Digital",
 };
 
