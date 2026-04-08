@@ -43,7 +43,6 @@ const Navbar = ({ ticketCount = 0 }) => {
       <style>{`
         @media (max-width: 480px) {
           .nav-logo-text { display: none !important; }
-          .nav-pill-text { display: none !important; }
         }
       `}</style>
       {/* ── Navbar ───────────────────────────────────────────────────────── */}
@@ -192,7 +191,7 @@ const Navbar = ({ ticketCount = 0 }) => {
             </div>
           </div>
 
-          {/* Active page pill */}
+          {/* Ticket count (Admin) */}
           <div
             style={{
               marginLeft: "auto",
@@ -201,24 +200,6 @@ const Navbar = ({ ticketCount = 0 }) => {
               gap: 8,
             }}
           >
-            <div
-              style={{
-                fontSize: 12,
-                color: "rgba(255,255,255,0.8)",
-                fontWeight: 600,
-                background: "rgba(255,255,255,0.12)",
-                borderRadius: 8,
-                padding: "5px 14px",
-                border: "1px solid rgba(255,255,255,0.18)",
-              }}
-            >
-              {mounted ? links.find((l) => l.href === pathname)?.icon : ""}{" "}
-              <span className="nav-pill-text">
-                {mounted
-                  ? links.find((l) => l.href === pathname)?.label || "MyAspirasi"
-                  : "MyAspirasi"}
-              </span>
-            </div>
             {ticketCount > 0 && (
               <div
                 style={{
