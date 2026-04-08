@@ -323,10 +323,11 @@ const TrackPage = () => {
           style={{
             background: "#fff",
             borderRadius: 20,
-            padding: 28,
+            padding: "24px 20px", // Mengurangi padding horizontal sedikit untuk layar kecil
             boxShadow: "0 2px 24px rgba(26,58,143,0.08)",
             border: "1px solid #C8D8EE",
             marginBottom: 24,
+            boxSizing: "border-box", // WAJIB: Agar padding tidak menambah lebar elemen
           }}
         >
           <label
@@ -340,20 +341,31 @@ const TrackPage = () => {
           >
             Nomor Tiket
           </label>
-          <div style={{ display: "flex", gap: 10 }}>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              width: "100%", // Memastikan container selebar parent
+              boxSizing: "border-box"
+            }}
+          >
             <input
               style={{
                 flex: 1,
+                minWidth: 0, // PENTING: Mencegah input 'memaksa' lebarnya keluar di Flexbox
                 padding: "12px 16px",
                 borderRadius: 10,
                 border: error ? "1.5px solid #C0272D" : "1.5px solid #C8D8EE",
                 outline: "none",
-                fontSize: 15,
+                fontSize: "min(15px, 3.8vw)", // Font mengecil sedikit secara dinamis di layar sangat kecil
                 color: "#0F1F4B",
                 fontFamily: "monospace",
                 fontWeight: 600,
                 letterSpacing: 1,
                 transition: "border-color 0.15s",
+                boxSizing: "border-box",
+                WebkitAppearance: "none", // Reset untuk iOS
               }}
               placeholder="TKT-20260308-1234"
               value={input}
@@ -367,7 +379,7 @@ const TrackPage = () => {
               onClick={handleTrack}
               disabled={loading}
               style={{
-                padding: "12px 24px",
+                padding: "12px 20px", // Sedikit dipersempit agar lebih aman
                 borderRadius: 10,
                 border: "none",
                 background: loading
@@ -377,10 +389,11 @@ const TrackPage = () => {
                 fontWeight: 700,
                 fontSize: 14,
                 cursor: loading ? "not-allowed" : "pointer",
-                minWidth: 100,
+                whiteSpace: "nowrap", // Mencegah teks tombol terpotong ke bawah
+                flexShrink: 0, // PENTING: Mencegah tombol gepeng saat layar sempit
               }}
             >
-              {loading ? "⏳ Mencari..." : "Lacak"}
+              {loading ? "⏳" : "Lacak"}
             </button>
           </div>
           {error && (
@@ -794,7 +807,7 @@ const TrackPage = () => {
           © 2026 BPT Komdigi · Kementerian Komunikasi dan Digital RI
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
