@@ -1,28 +1,91 @@
 import { Resend } from "resend";
+import formData from 'form-data';
+import Mailgun from "mailgun.js";
+
+const mailgun = new Mailgun(FormData);
+const mg = mailgun.client({
+  username: 'api',
+  key: process.env.MAILGUN_API_KEY
+})
 
 const resend = new Resend(process.env.RESEND_API_KEY || "dummy_key");
 
-export async function sendMail({ from, to, cc, subject, html, text }) {
+export async function sendMail({ to, cc, subject, html, htmlContent }) {
+  const API_KEY = process.env.MAILGUN_API_KEY;
+  const DOMAIN = 'mail.pkesitt.my.id'; // Diambil dari screenshot Python Anda
+
+  if (!API_KEY) {
+    console.error("MAILGUN_API_KEY tidak ditemukan di .env!");
+    return { success: false, error: "Missing API Key" };
+  }
+
+  // 2. Siapkan URL Endpoint (Sesuai baris ke-5 di kode Python)
+  const url = process.env.MAILGUN_DOMAIN;
+
+  const basicAuth = Buffer.from(`api:${API_KEY}`).toString('base64');
+
+  const formData = new FormData();
+  formData.append('from', `Sistem Ticketing <postmaster@${DOMAIN}>`);
+  formData.append('to', to);
+  if (cc) {
+    if (Array.isArray(cc)) {
+      if (cc.length > 0) formData.append('cc', cc.join(','));
+    } else {
+      formData.append('cc', cc);
+    }
+  }
+  formData.append('subject', subject);
+  formData.append('html', html || htmlContent);
   try {
-    const { data, error } = await resend.emails.send({
-      from: from || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-      to: typeof to === "string" ? [to] : to,
-      cc,
-      subject,
-      html: html || text,
+    // 5. Eksekusi HTTP POST Request (Sama dengan requests.post di Python)
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`,
+        // Catatan: Jangan menuliskan 'Content-Type': 'multipart/form-data' secara manual.
+        // Fetch akan secara otomatis menambahkannya beserta boundary form.
+      },
+      body: formData,
     });
 
-    if (error) {
-      console.error("Resend Error:", error);
-      throw new Error(error.message);
+    const result = await response.json();
+
+    // Cek apakah status HTTP bukan 200 OK
+    if (!response.ok) {
+      console.error("Mailgun API Error:", result);
+      throw new Error(result.message || "Gagal dari server Mailgun");
     }
 
-    return data;
+    console.log(`✅ Email berhasil terkirim ke ${to}. ID:`, result.id);
+    return { success: true, result };
+
   } catch (error) {
-    console.error("Mail Error:", error);
-    throw new Error(error.message);
+    console.error("❌ Gagal eksekusi Fetch:", error.message);
+    return { success: false, error: error.message };
   }
 }
+
+// export async function sendMail({ from, to, cc, subject, html, text }) {
+//   try {
+//     const { data, error } = await resend.emails.send({
+//       from: from || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+//       to: typeof to === "string" ? [to] : to,
+//       cc,
+//       subject,
+//       html: html || text,
+//     });
+
+//     if (error) {
+//       console.error("Resend Error:", error);
+//       throw new Error(error.message);
+//     }
+
+//     return data;
+//   } catch (error) {
+//     console.error("Mail Error:", error);
+//     throw new Error(error.message);
+//   }
+// }
 
 export async function sendTicketCreatedEmail(email, ticket) {
   const html = `

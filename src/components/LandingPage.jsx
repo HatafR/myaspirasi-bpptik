@@ -9,7 +9,6 @@ import formatDate from "@/utils/formatDate";
 import SentimentBadge from "@/components/SentimentBadge";
 import CategoryBadge from "@/components/CategoryBadge";
 import Navbar from "@/components/Navbar";
-import { analyzeTextAI } from "@/lib/ai-analyze";
 import Script from "next/script";
 
 const STATUS_MAP = {
