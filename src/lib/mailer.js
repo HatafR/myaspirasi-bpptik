@@ -2,14 +2,6 @@ import { Resend } from "resend";
 import formData from 'form-data';
 import Mailgun from "mailgun.js";
 
-const mailgun = new Mailgun(FormData);
-const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY
-})
-
-const resend = new Resend(process.env.RESEND_API_KEY || "dummy_key");
-
 export async function sendMail({ to, cc, subject, html, htmlContent }) {
   const API_KEY = process.env.MAILGUN_API_KEY;
   const DOMAIN = 'mail.pkesitt.my.id'; // Diambil dari screenshot Python Anda
