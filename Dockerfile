@@ -46,6 +46,9 @@ RUN useradd --system --uid 1001 -m nextjs
 
 COPY --from=builder /app/public ./public
 
+# Private upload storage (outside public web root — VAPT remediation)
+RUN mkdir -p private_uploads && chown -R nextjs:nodejs private_uploads
+
 # Set the correct permission for prerender cache and entire app directory
 RUN mkdir .next
 RUN chown -R nextjs:nodejs /app

@@ -152,6 +152,7 @@ const StatusBadge = ({ status }) => {
 const TrackPage = () => {
   const router = useRouter();
   const [input, setInput] = useState("");
+  const [tokenInput, setTokenInput] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -166,8 +167,9 @@ const TrackPage = () => {
   };
 
   const handleTrack = async () => {
-    const trimmed = input.trim().toUpperCase();
-    if (!trimmed) return;
+    const trimmedTicket = input.trim();
+    const trimmedToken = tokenInput.trim();
+    if (!trimmedTicket || !trimmedToken) return;
 
     setLoading(true);
     setError("");
@@ -176,11 +178,16 @@ const TrackPage = () => {
       const res = await fetch("/api/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticket: trimmed }),
+        body: JSON.stringify({ ticket: trimmedTicket, trackingToken: trimmedToken }),
       });
 
       if (res.status === 429) {
         setError("⚠️ Maksimal 5 pencarian per menit");
+        return;
+      }
+
+      if (res.status === 403) {
+        setError("⚠️ Akses diblokir sementara karena terlalu banyak kegagalan. Silakan coba lagi nanti.");
         return;
       }
 
@@ -223,12 +230,12 @@ const TrackPage = () => {
 
     try {
       console.log("SUBMIT RATING:", {
-        ticketNumber: result.ticketNumber,
+        ticketId: result.ticketId,
         rating,
         tanggapan,
       });
 
-      const res = await fetch(`/api/tickets/${result.ticketNumber}/rating`, {
+      const res = await fetch(`/api/tickets/${result.ticketId}/rating`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -323,63 +330,92 @@ const TrackPage = () => {
           style={{
             background: "#fff",
             borderRadius: 20,
-            padding: "24px 20px", // Mengurangi padding horizontal sedikit untuk layar kecil
+            padding: "24px 20px",
             boxShadow: "0 2px 24px rgba(26,58,143,0.08)",
             border: "1px solid #C8D8EE",
             marginBottom: 24,
-            boxSizing: "border-box", // WAJIB: Agar padding tidak menambah lebar elemen
+            boxSizing: "border-box",
           }}
         >
-          <label
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: "#0F1F4B",
-              display: "block",
-              marginBottom: 10,
-            }}
-          >
-            Nomor Tiket
-          </label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#0F1F4B",
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Nomor Tiket (ID UUID)
+              </label>
+              <input
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: 10,
+                  border: error ? "1.5px solid #C0272D" : "1.5px solid #C8D8EE",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#0F1F4B",
+                  fontFamily: "monospace",
+                  fontWeight: 600,
+                  boxSizing: "border-box",
+                  WebkitAppearance: "none",
+                }}
+                placeholder="Contoh: 123e4567-e89b-12d3-a456-426614174000"
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setError("");
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleTrack()}
+              />
+            </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              width: "100%", // Memastikan container selebar parent
-              boxSizing: "border-box"
-            }}
-          >
-            <input
-              style={{
-                flex: 1,
-                minWidth: 0, // PENTING: Mencegah input 'memaksa' lebarnya keluar di Flexbox
-                padding: "12px 16px",
-                borderRadius: 10,
-                border: error ? "1.5px solid #C0272D" : "1.5px solid #C8D8EE",
-                outline: "none",
-                fontSize: "min(15px, 3.8vw)", // Font mengecil sedikit secara dinamis di layar sangat kecil
-                color: "#0F1F4B",
-                fontFamily: "monospace",
-                fontWeight: 600,
-                letterSpacing: 1,
-                transition: "border-color 0.15s",
-                boxSizing: "border-box",
-                WebkitAppearance: "none", // Reset untuk iOS
-              }}
-              placeholder="TKT-20260308-1234"
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value.toUpperCase());
-                setError("");
-              }}
-              onKeyDown={(e) => e.key === "Enter" && handleTrack()}
-            />
+            <div>
+              <label
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#0F1F4B",
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Token Pelacakan (Tracking Token)
+              </label>
+              <input
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: 10,
+                  border: error ? "1.5px solid #C0272D" : "1.5px solid #C8D8EE",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#0F1F4B",
+                  fontFamily: "monospace",
+                  fontWeight: 600,
+                  boxSizing: "border-box",
+                  WebkitAppearance: "none",
+                }}
+                placeholder="Contoh: 5aea9dab-f55c-4c96-afb4-5e123b6fdac1"
+                value={tokenInput}
+                onChange={(e) => {
+                  setTokenInput(e.target.value);
+                  setError("");
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleTrack()}
+              />
+            </div>
+
             <button
               onClick={handleTrack}
               disabled={loading}
               style={{
-                padding: "12px 20px", // Sedikit dipersempit agar lebih aman
+                width: "100%",
+                padding: "12px 20px",
                 borderRadius: 10,
                 border: "none",
                 background: loading
@@ -389,17 +425,19 @@ const TrackPage = () => {
                 fontWeight: 700,
                 fontSize: 14,
                 cursor: loading ? "not-allowed" : "pointer",
-                whiteSpace: "nowrap", // Mencegah teks tombol terpotong ke bawah
-                flexShrink: 0, // PENTING: Mencegah tombol gepeng saat layar sempit
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                boxSizing: "border-box",
+                marginTop: 8,
               }}
             >
-              {loading ? "⏳" : "Lacak"}
+              {loading ? "⏳ Mencari..." : "Lacak Tiket"}
             </button>
           </div>
           {error && (
             <div
               style={{
-                marginTop: 10,
+                marginTop: 14,
                 padding: "10px 14px",
                 borderRadius: 8,
                 background: "#FEF2F2",
@@ -454,9 +492,10 @@ const TrackPage = () => {
                     fontWeight: 800,
                     color: "#fff",
                     fontFamily: "monospace",
+                    wordBreak: "break-all",
                   }}
                 >
-                  {result.ticketNumber}
+                  {result.ticketId}
                 </div>
               </div>
               <StatusBadge status={result.status} />
@@ -575,61 +614,97 @@ const TrackPage = () => {
                   overflow: "hidden",
                 }}
               >
-                {[
-                  ["Nama", result.name],
-                  ["Email", result.email || "-"],
-                  ["Divisi", div?.name || "-"],
-                  ["Tanggal", formatDate(result.createdAt)],
-                ].map(([label, val], i, arr) => (
-                  <div
-                    key={label}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "11px 16px",
-                      borderBottom:
-                        i < arr.length - 1 ? "1px solid #C8D8EE" : "none",
-                      background: i % 2 === 0 ? "#F8FAFF" : "#fff",
-                    }}
-                  >
-                    <span style={{ fontSize: 13, color: "#5A6E8C" }}>
-                      {label}
-                    </span>
-                    <span
+                {result.message ? (
+                  [
+                    ["Nama", result.name],
+                    ["Email", result.email || "-"],
+                    ["Divisi", div?.name || "-"],
+                    ["Tanggal", formatDate(result.createdAt)],
+                  ].map(([label, val], i, arr) => (
+                    <div
+                      key={label}
                       style={{
-                        fontSize: 13,
-                        color: "#0F1F4B",
-                        fontWeight: 700,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "11px 16px",
+                        borderBottom:
+                          i < arr.length - 1 ? "1px solid #C8D8EE" : "none",
+                        background: i % 2 === 0 ? "#F8FAFF" : "#fff",
                       }}
                     >
-                      {val}
-                    </span>
+                      <span style={{ fontSize: 13, color: "#5A6E8C" }}>
+                        {label}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          color: "#0F1F4B",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {val}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  [
+                    ["ID Tiket", result.ticketId],
+                    ["Tanggal Dibuat", formatDate(result.createdAt)],
+                    ["Tanggal Diperbarui", formatDate(result.updatedAt || result.createdAt)],
+                  ].map(([label, val], i, arr) => (
+                    <div
+                      key={label}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "11px 16px",
+                        borderBottom:
+                          i < arr.length - 1 ? "1px solid #C8D8EE" : "none",
+                        background: i % 2 === 0 ? "#F8FAFF" : "#fff",
+                      }}
+                    >
+                      <span style={{ fontSize: 13, color: "#5A6E8C" }}>
+                        {label}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          color: "#0F1F4B",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {val}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {result.message && (
+                <div style={{ marginTop: 16 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#5A6E8C",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Pesan
                   </div>
-                ))}
-              </div>
-              <div style={{ marginTop: 16 }}>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#5A6E8C",
-                    marginBottom: 8,
-                  }}
-                >
-                  Pesan
+                  <div
+                    style={{
+                      background: "#F8FAFF",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      border: "1px solid #C8D8EE",
+                      fontSize: 14,
+                    }}
+                  >
+                    {result.message}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    background: "#F8FAFF",
-                    borderRadius: 10,
-                    padding: "14px 16px",
-                    border: "1px solid #C8D8EE",
-                    fontSize: 14,
-                  }}
-                >
-                  {result.message}
-                </div>
-              </div>
+              )}
 
               {result.attachments && result.attachments.length > 0 && (
                 <div style={{ marginTop: 16 }}>

@@ -282,7 +282,7 @@ const AdminDashboard = () => {
         }
 
         if (u.role === "SUPER_ADMIN") {
-          const serviceRes = await fetch("/api/services?all=true", {
+          const serviceRes = await fetch("/api/admin/services?all=true", {
             credentials: "include",
           });
           const serviceResult = await serviceRes.json();
@@ -514,7 +514,7 @@ const AdminDashboard = () => {
   const handleSaveService = async (e) => {
     e.preventDefault();
     const isEdit = !!editingService;
-    const url = isEdit ? `/api/services/${editingService.id}` : "/api/services";
+    const url = isEdit ? `/api/admin/services/${editingService.id}` : "/api/admin/services";
     const method = isEdit ? "PATCH" : "POST";
 
     try {
@@ -615,7 +615,8 @@ const AdminDashboard = () => {
     setConfirmDelete({ show: false, type: "", id: null, name: "" });
 
     try {
-      const res = await fetch(`/api/${type}/${id}`, {
+      const targetUrl = type === "services" ? `/api/admin/services/${id}` : `/api/${type}/${id}`;
+      const res = await fetch(targetUrl, {
         method: "PATCH",
         credentials: "include",
         headers: {

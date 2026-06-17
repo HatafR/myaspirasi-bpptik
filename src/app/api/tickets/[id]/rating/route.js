@@ -50,7 +50,7 @@ export async function POST(req, { params }) {
     }
 
     const ticket = await prisma.ticket.findUnique({
-      where: { ticketNumber: id },
+      where: { id: id },
     });
 
     if (!ticket) {

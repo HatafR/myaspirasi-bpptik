@@ -31,19 +31,33 @@ export async function loginAdmin(identifier, password) {
     throw new AppError("JWT secret not configured", "AUTH_INVALID", 401);
   }
 
-  const token = jwt.sign(
+  const accessToken = jwt.sign(
     {
       userId: user.id,
       role: user.role,
+      type: "access"
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "1h",
+      expiresIn: "15m",
+    },
+  );
+
+  const refreshToken = jwt.sign(
+    {
+      userId: user.id,
+      role: user.role,
+      type: "refresh"
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "7d",
     },
   );
 
   return {
-    token,
+    accessToken,
+    refreshToken,
     user: {
       id: user.id,
       name: user.name,

@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:security": "node --test tests/security.test.js",
+    "migrate:uuid": "node scripts/migrate-uuid.js"
   },
   "dependencies": {
     "@google/genai": "^1.49.0",
@@ -29,6 +31,7 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "resend": "^6.10.0",
+    "sharp": "^0.34.5",
     "sweetalert2": "^11.26.24",
     "zod": "^4.3.6"
   },

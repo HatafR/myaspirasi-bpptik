@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuthFromCookie } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { redis } from "@/lib/redis";
+import jwt from "jsonwebtoken";
 
 const LIMIT = 5;
 const WINDOW = 60; // seconds
@@ -140,10 +141,23 @@ export async function POST(req) {
 
     const ticket = await createTicket(parsed.data);
 
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT secret not configured");
+    }
+
+    const uploadToken = jwt.sign(
+      { ticketId: ticket.id, action: "upload_attachment" },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
     return Response.json(
       {
         success: true,
-        data: ticket,
+        data: {
+          ...ticket,
+          uploadToken,
+        },
       },
       { status: 201 },
     );

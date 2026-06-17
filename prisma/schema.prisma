@@ -94,6 +94,7 @@ model Service {
 model Ticket {
   id           String @id @default(uuid())
   ticketNumber String @unique
+  trackingToken String @unique @default(uuid())
 
   name    String?
   email   String

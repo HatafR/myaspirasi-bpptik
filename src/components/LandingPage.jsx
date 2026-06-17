@@ -155,27 +155,8 @@ const LandingPage = () => {
       return;
     }
 
-    setSubmitting(true);
-
     try {
-      let uploadedFile = null;
-      if (attachment) {
-        const formData = new FormData();
-        formData.append("file", attachment);
-
-        const uploadRes = await fetch("/api/uploads", {
-          method: "POST",
-          body: formData,
-        });
-
-        const uploadData = await uploadRes.json();
-
-        if (!uploadRes.ok) {
-          throw new Error(uploadData.message || "Gagal mengunggah file. Silakan coba lagi.");
-        }
-        uploadedFile = uploadData.data;
-      }
-
+      // 1. Submit ticket metadata first
       const res = await fetch("/api/tickets", {
         method: "POST",
         headers: {
@@ -188,7 +169,6 @@ const LandingPage = () => {
           subject: subject.trim(),
           message: message.trim(),
           captchaToken: isDev ? "dev-token" : captchaToken,
-          ...(uploadedFile && { attachment: uploadedFile }),
         }),
       });
 
@@ -210,6 +190,25 @@ const LandingPage = () => {
 
         const apiError = mapValidationText(rawMessage);
         throw new Error(apiError);
+      }
+
+      // 2. Upload file if there is one, using the upload token returned by the server
+      if (attachment && result.data.uploadToken) {
+        const formData = new FormData();
+        formData.append("file", attachment);
+        formData.append("ticketId", result.data.id);
+        formData.append("uploadToken", result.data.uploadToken);
+
+        const uploadRes = await fetch("/api/uploads", {
+          method: "POST",
+          body: formData,
+        });
+
+        const uploadData = await uploadRes.json();
+
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.message || "Tiket dibuat tetapi gagal mengunggah lampiran.");
+        }
       }
 
       setSubmitted(result.data);
@@ -292,15 +291,16 @@ const LandingPage = () => {
             <div style={{ padding: "24px 32px 32px" }}>
               <div style={{ background: "#F8FAFF", borderRadius: 12, padding: "6px 0", border: "1px solid #C8D8EE", marginBottom: 24 }}>
                 {[
-                  ["Nomor Tiket", submitted.ticketNumber],
+                  ["Nomor Tiket (ID)", submitted.ticketNumber],
+                  ["Token Pelacakan", submitted.trackingToken],
                   ["Subjek", submitted.subject || "-"],
                   ["Layanan", [div?.icon, div?.name].filter(Boolean).join(" ")],
                   ["Tanggal", formatDate(submitted.createdAt)],
                   ["Email", submitted.email],
-                ].map(([label, val], i) => (
-                  <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 20px", borderBottom: i < 4 ? "1px solid #C8D8EE" : "none" }}>
+                ].map(([label, val], i, arr) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 20px", borderBottom: i < arr.length - 1 ? "1px solid #C8D8EE" : "none" }}>
                     <span style={{ fontSize: 13, color: "var(--gray)", fontWeight: 500 }}>{label}</span>
-                    <span style={{ fontSize: 13, color: "#0F2744", fontWeight: 700, fontFamily: i === 0 ? "monospace" : "inherit" }}>{val}</span>
+                    <span style={{ fontSize: 13, color: label === "Token Pelacakan" ? "#C0272D" : "#0F2744", fontWeight: 700, fontFamily: (label.includes("Nomor") || label.includes("Token")) ? "monospace" : "inherit" }}>{val}</span>
                   </div>
                 ))}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 20px" }}>

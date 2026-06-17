@@ -87,7 +87,11 @@ export async function sendTicketCreatedEmail(email, ticket) {
       <table style="width: 100%; max-width: 500px; border-collapse: collapse; margin-bottom: 20px;">
         <tr>
           <td style="padding: 8px 0; border-bottom: 1px solid #ddd;"><strong>Nomor tiket:</strong></td>
-          <td style="padding: 8px 0; border-bottom: 1px solid #ddd;">${ticket.ticketNumber}</td>
+          <td style="padding: 8px 0; border-bottom: 1px solid #ddd; font-family: monospace;">${ticket.ticketNumber}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; border-bottom: 1px solid #ddd;"><strong>Token pelacakan:</strong></td>
+          <td style="padding: 8px 0; border-bottom: 1px solid #ddd; font-family: monospace; color: #c0272d;">${ticket.trackingToken || "-"}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; border-bottom: 1px solid #ddd;"><strong>Layanan:</strong></td>
@@ -98,7 +102,7 @@ export async function sendTicketCreatedEmail(email, ticket) {
           <td style="padding: 8px 0; border-bottom: 1px solid #ddd;">${ticket.status}</td>
         </tr>
       </table>
-      <p>Simpan nomor tiket ini untuk melakukan pelacakan status tiket.</p>
+      <p>Simpan <strong>nomor tiket</strong> dan <strong>token pelacakan</strong> untuk melacak status tiket. Keduanya diperlukan.</p>
       <p><a href="${process.env.NEXT_PUBLIC_BASE_URL}/track" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px;">Lacak Tiket Anda</a></p>
       <p>Terima kasih.</p>
     </div>
