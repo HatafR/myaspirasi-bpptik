@@ -15,8 +15,10 @@ services:
         required: true
     environment:
       NODE_ENV: production
-      # Override nilai localhost dari .env agar cocok dengan jaringan Docker internal
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/ticketing?schema=public
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-ticketing}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-ticketing}?schema=public
       REDIS_URL: redis://redis:6379
       CLAMAV_HOST: clamav
       CLAMAV_PORT: "3310"
@@ -41,15 +43,15 @@ services:
     image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: ticketing
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-ticketing}
     ports:
       - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ticketing"]
+      test: ["CMD-SHELL", "PGPASSWORD=\"$$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" -c 'SELECT 1' >/dev/null 2>&1 || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
