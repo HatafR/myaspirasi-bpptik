@@ -52,15 +52,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./
 
-# Prisma 7 CLI + config deps tidak disertakan Next.js standalone output
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
-COPY --from=builder /app/node_modules/effect ./node_modules/effect
-COPY --from=builder /app/node_modules/fast-check ./node_modules/fast-check
-COPY --from=builder /app/node_modules/pure-rand ./node_modules/pure-rand
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
-RUN chown -R nextjs:nodejs /app/node_modules
+# Prisma CLI tidak disertakan Next.js standalone — install global agar WASM/binary lengkap
+RUN PRISMA_VERSION="$(node -p "require('@prisma/client/package.json').version")" \
+  && npm install -g "prisma@${PRISMA_VERSION}"
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
