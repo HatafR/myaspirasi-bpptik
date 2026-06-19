@@ -9,6 +9,7 @@ WORKDIR /app
 
 COPY package.json ./
 COPY prisma ./prisma/
+COPY prisma.config.cjs ./
 RUN npm install lightningcss-linux-x64-gnu
 RUN npm install
 
@@ -50,9 +51,9 @@ RUN mkdir -p private_uploads && chown -R nextjs:nodejs private_uploads
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.cjs ./
 
-# Prisma CLI tidak disertakan Next.js standalone — install global agar WASM/binary lengkap
+# Prisma CLI + WASM — satu instalasi global, terpisah dari node_modules standalone
 RUN PRISMA_VERSION="$(node -p "require('@prisma/client/package.json').version")" \
   && npm install -g "prisma@${PRISMA_VERSION}"
 
