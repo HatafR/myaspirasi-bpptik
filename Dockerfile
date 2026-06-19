@@ -30,6 +30,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
 
+# Bundle modul yang dibutuhkan `prisma db seed` (di luar Next.js standalone trace)
+RUN mkdir -p /app/seed-bundle/node_modules && \
+    cd /app && \
+    npm ls @prisma/adapter-pg pg bcrypt --all --parseable 2>/dev/null | sort -u | while IFS= read -r pkgdir; do \
+      rel="${pkgdir#/app/node_modules/}"; \
+      mkdir -p "/app/seed-bundle/node_modules/$(dirname "$rel")"; \
+      cp -rL "$pkgdir" "/app/seed-bundle/node_modules/$rel"; \
+    done
+
 # Production image
 FROM base AS runner
 WORKDIR /app
@@ -52,6 +61,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.cjs ./
+
+# Modul untuk prisma db seed (@prisma/adapter-pg, pg, bcrypt, dll.)
+COPY --from=builder /app/seed-bundle/node_modules/. ./node_modules/
+RUN chown -R nextjs:nodejs /app/node_modules
 
 # Prisma CLI + WASM — satu instalasi global, terpisah dari node_modules standalone
 RUN PRISMA_VERSION="$(node -p "require('@prisma/client/package.json').version")" \
