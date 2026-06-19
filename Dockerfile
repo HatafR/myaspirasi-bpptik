@@ -1,17 +1,14 @@
-# 1. PERBAIKAN: Install OpenSSL di stage base agar diwarisi oleh stage runner
+# Base image with OpenSSL (required by Prisma on Debian slim)
 FROM node:20-slim AS base
 RUN apt-get update && apt-get install -y --no-install-recommends openssl libc6-dev && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies only when needed
 FROM base AS deps
-# 2. PERBAIKAN: build-essential tetap di sini karena hanya butuh saat install native modules, tidak butuh di production
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
 COPY package.json ./
 COPY prisma ./prisma/
-# Explicitly install the GNU/Linux binary for lightningcss (Next.js/Tailwind 4 requirement)
 RUN npm install lightningcss-linux-x64-gnu
 RUN npm install
 
@@ -21,10 +18,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client
 RUN npx prisma generate
 
-# Build-time environment variables for Next.js frontend
 ARG NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
@@ -34,45 +29,36 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
 
-# Production image, copy all the files and run next
+# Production image
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-RUN groupadd --system --gid 1001 nodejs
-RUN useradd --system --uid 1001 -m nextjs
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd --system --gid 1001 nodejs \
+  && useradd --system --uid 1001 -m nextjs
 
 COPY --from=builder /app/public ./public
 
-# Private upload storage (outside public web root — VAPT remediation)
 RUN mkdir -p private_uploads && chown -R nextjs:nodejs private_uploads
 
-# Set the correct permission for prerender cache and entire app directory
-RUN mkdir .next
-RUN chown -R nextjs:nodejs /app
-
-# Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./
 
-USER nextjs
-RUN npm install prisma
+# Prisma 7 CLI + config deps tidak disertakan Next.js standalone output
+RUN npm install --no-save prisma@7.6.0 dotenv@17.3.1 \
+  && chown -R nextjs:nodejs /app/node_modules
 
-RUN mkdir -p /app/node_modules/dotenv && \
-    echo "module.exports = {};" > /app/node_modules/dotenv/config.js && \
-    echo '{"name":"dotenv","main":"config.js"}' > /app/node_modules/dotenv/package.json
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# 3. PERBAIKAN: Tambahkan --accept-data-loss pada db push
-# Mencegah container hang/stuck jika Prisma meminta konfirmasi (y/N) saat ada perubahan skema
-# (Hanya ubah baris paling bawah ini di Dockerfile Anda)
-# Hapus CMD yang lama, ganti dengan ini:
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server.js"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
