@@ -32,11 +32,12 @@ RUN npm run build
 
 # Bundle modul yang dibutuhkan `prisma db seed` (di luar Next.js standalone trace)
 RUN mkdir -p /app/seed-bundle/node_modules && \
-    cd /app && \
-    npm ls @prisma/adapter-pg pg bcrypt --all --parseable 2>/dev/null | sort -u | while IFS= read -r pkgdir; do \
-      rel="${pkgdir#/app/node_modules/}"; \
-      mkdir -p "/app/seed-bundle/node_modules/$(dirname "$rel")"; \
-      cp -rL "$pkgdir" "/app/seed-bundle/node_modules/$rel"; \
+    cp -rL /app/node_modules/@prisma /app/seed-bundle/node_modules/@prisma && \
+    cp -rL /app/node_modules/bcrypt /app/seed-bundle/node_modules/bcrypt && \
+    cp -rL /app/node_modules/pg /app/seed-bundle/node_modules/pg && \
+    cd /app/node_modules && \
+    for pkg in pg-* postgres-* node-gyp-build node-addon-api; do \
+      [ -e "$pkg" ] && cp -rL "$pkg" /app/seed-bundle/node_modules/; \
     done
 
 # Production image
