@@ -183,21 +183,36 @@ async function main() {
   const adminMap = {};
 
   for (const adminConfig of adminCredentials) {
-    const admin = await prisma.user.upsert({
-      where: { email: adminConfig.email },
-      update: {
-        password: adminConfig.hashedPassword,
-        username: adminConfig.username,
-        role: adminConfig.role,
-      },
-      create: {
-        name: adminConfig.name,
-        email: adminConfig.email,
-        username: adminConfig.username,
-        password: adminConfig.hashedPassword,
-        role: adminConfig.role,
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: adminConfig.email },
+          { username: adminConfig.username },
+        ],
       },
     });
+
+    const admin = existing
+      ? await prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            name: adminConfig.name,
+            email: adminConfig.email,
+            username: adminConfig.username,
+            password: adminConfig.hashedPassword,
+            role: adminConfig.role,
+          },
+        })
+      : await prisma.user.create({
+          data: {
+            name: adminConfig.name,
+            email: adminConfig.email,
+            username: adminConfig.username,
+            password: adminConfig.hashedPassword,
+            role: adminConfig.role,
+          },
+        });
+
     adminMap[adminConfig.username] = admin;
   }
 
