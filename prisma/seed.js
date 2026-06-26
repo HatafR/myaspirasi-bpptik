@@ -178,41 +178,53 @@ const adminCredentials = [
   },
 ];
 
+async function upsertAdmin(adminConfig) {
+  const byUsername = await prisma.user.findUnique({
+    where: { username: adminConfig.username },
+  });
+  const byEmail = await prisma.user.findUnique({
+    where: { email: adminConfig.email },
+  });
+
+  // Sisa seed gagal bisa membuat 2 baris: satu punya username, satu punya email
+  if (byUsername && byEmail && byUsername.id !== byEmail.id) {
+    await prisma.user.delete({ where: { id: byEmail.id } });
+  }
+
+  const existing = byUsername ?? byEmail;
+
+  if (existing) {
+    return prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        name: adminConfig.name,
+        email: adminConfig.email,
+        username: adminConfig.username,
+        password: adminConfig.hashedPassword,
+        role: adminConfig.role,
+      },
+    });
+  }
+
+  return prisma.user.create({
+    data: {
+      name: adminConfig.name,
+      email: adminConfig.email,
+      username: adminConfig.username,
+      password: adminConfig.hashedPassword,
+      role: adminConfig.role,
+    },
+  });
+}
+
 async function main() {
+  console.log("[seed] menjalankan seed admin v2 (idempotent)");
+
   // Create all admins and store them in a map
   const adminMap = {};
 
   for (const adminConfig of adminCredentials) {
-    const existing = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: adminConfig.email },
-          { username: adminConfig.username },
-        ],
-      },
-    });
-
-    const admin = existing
-      ? await prisma.user.update({
-          where: { id: existing.id },
-          data: {
-            name: adminConfig.name,
-            email: adminConfig.email,
-            username: adminConfig.username,
-            password: adminConfig.hashedPassword,
-            role: adminConfig.role,
-          },
-        })
-      : await prisma.user.create({
-          data: {
-            name: adminConfig.name,
-            email: adminConfig.email,
-            username: adminConfig.username,
-            password: adminConfig.hashedPassword,
-            role: adminConfig.role,
-          },
-        });
-
+    const admin = await upsertAdmin(adminConfig);
     adminMap[adminConfig.username] = admin;
   }
 
