@@ -60,7 +60,9 @@ Header di `next.config` saja **tidak cukup** — pasang juga di NPM.
    - Aktifkan **Force SSL** (redirect HTTP → HTTPS)
    - Aktifkan **HTTP/2 Support**
 
-3. **Tab Advanced** — tempel isi file `deploy/npm-proxy-advanced.conf`
+3. **Tab Advanced** — paste isi **`deploy/npm-proxy-advanced-paste.conf`** (tanpa komentar `#`)
+   - Matikan **Block Common Exploits** di tab Details
+   - Lihat **`deploy/NPM-HEADERS.md`** jika muncul Internal Error
 
 4. Verifikasi:
 ```bash
