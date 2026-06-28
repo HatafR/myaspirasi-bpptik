@@ -46,7 +46,30 @@ rm -f public/uploads/malicious.*
 TEST_BASE_URL=http://127.0.0.1:3000 npm run test:security
 ```
 
-### 7. Konfigurasi OpenResty (TLS + headers)
+### 7. Konfigurasi Nginx Proxy Manager (TLS + headers) — **WAJIB untuk temuan VAPT**
+
+Domain publik `ticketing-bpt.komdigi.go.id` dilayani NPM, bukan langsung dari Next.js.
+Header di `next.config` saja **tidak cukup** — pasang juga di NPM.
+
+1. **Proxy Host → Details**
+   - Forward Hostname: `app` (bukan `ticketing-app`)
+   - Forward Port: `3000`
+   - Pastikan NPM satu Docker network dengan stack (`docker network connect myaspirasi-bpptik_default nginx-proxy-manager`)
+
+2. **Tab SSL**
+   - Aktifkan **Force SSL** (redirect HTTP → HTTPS)
+   - Aktifkan **HTTP/2 Support**
+
+3. **Tab Advanced** — tempel isi file `deploy/npm-proxy-advanced.conf`
+
+4. Verifikasi:
+```bash
+curl -sI https://ticketing-bpt.komdigi.go.id | grep -iE 'x-frame|content-security|strict-transport|referrer|permissions|cross-origin|x-content|x-permitted'
+```
+
+Clickjacking harus gagal di Burp Clickbandit setelah `X-Frame-Options: DENY` dan `frame-ancestors 'none'`.
+
+### 8. Konfigurasi OpenResty (alternatif)
 Pasang snippet di `deploy/openresty-snippet.conf` pada server OpenResty.
 Pastikan:
 - HTTPS aktif dengan sertifikat valid
@@ -63,7 +86,7 @@ curl -I https://ticketing-bpt.komdigi.go.id
 |---|--------|-------------|-------------------|
 | 1 | IDOR /api/track | UUID + trackingToken + rate limit | POST dengan TKT-* harus 400 |
 | 2 | PII /api/services | Public DTO tanpa assignedAdmin | GET /api/services tanpa auth |
-| 3 | TLS + headers | OpenResty + next.config headers | curl -I https://... |
+| 3 | TLS + headers | NPM Advanced + middleware + nginx internal | curl -I https://... |
 | 4 | File upload | Token + allowlist + private_uploads | POST .php tanpa token harus gagal |
 
 ## Variabel environment penting

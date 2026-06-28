@@ -44,6 +44,10 @@ const nextConfig = {
             key: "Cross-Origin-Embedder-Policy",
             value: "credentialless",
           },
+          {
+            key: "X-Permitted-Cross-Domain-Policies",
+            value: "none",
+          },
         ],
       },
     ];

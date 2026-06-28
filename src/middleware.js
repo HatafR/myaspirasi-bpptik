@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify, SignJWT } from "jose";
+import { applySecurityHeaders } from "@/lib/security-headers";
 
 // Routes yang membutuhkan login
 const PROTECTED_ROUTES = ["/admin/dashboard", "/dashboard"];
@@ -67,7 +68,7 @@ export async function middleware(request) {
           maxAge: 15 * 60,
           path: "/",
         });
-        return response;
+        return applySecurityHeaders(response);
       }
     }
 
@@ -75,10 +76,10 @@ export async function middleware(request) {
       const response = NextResponse.redirect(new URL("/login", request.url));
       response.cookies.delete("auth_token");
       response.cookies.delete("refresh_token");
-      return response;
+      return applySecurityHeaders(response);
     }
 
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   if (isAuthOnly) {
@@ -91,21 +92,19 @@ export async function middleware(request) {
     }
 
     if (payload) {
-      return NextResponse.redirect(
-        new URL("/admin/dashboard", request.url),
+      return applySecurityHeaders(
+        NextResponse.redirect(new URL("/admin/dashboard", request.url)),
       );
     }
 
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
-  return NextResponse.next();
+  return applySecurityHeaders(NextResponse.next());
 }
 
 export const config = {
   matcher: [
-    "/login",
-    "/dashboard/:path*",
-    "/admin/dashboard/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
